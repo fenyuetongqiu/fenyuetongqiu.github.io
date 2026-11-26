@@ -137,6 +137,7 @@
       <a href="#work">作品</a>
       <a href="#about">关于</a>
       <a href="#contact" class="keep">联系</a>
+      <button class="navbtn" id="accBtn" type="button">登录</button>
     </nav>
   </div>
 </header>
@@ -264,6 +265,12 @@
     </div>
   </div>
 </footer>
+<div id="accMask">
+  <div class="accbox">
+    <button class="accx" id="accX" type="button">×</button>
+    <div id="accBody"></div>
+  </div>
+</div>
 
 <script>
   (function () {
@@ -286,5 +293,132 @@
     }
   })();
 </script>
-</body>
+<script>
+(function () {
+  var API = 'https://1541955020-1l7btqdlx4.ap-shanghai.tencentscf.com'
+  var KEY = 'fy-token'
+  var ME = null
+
+  function $(id) { return document.getElementById(id) }
+  function tok() { try { return localStorage.getItem(KEY) || '' } catch (e) { return '' } }
+  function setTok(v) { try { v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY) } catch (e) {} }
+
+  function call(path, body, method) {
+    var opt = { method: method || (body ? 'POST' : 'GET'), headers: { 'Content-Type': 'application/json' } }
+    var t = tok(); if (t) opt.headers.Authorization = 'Bearer ' + t
+    if (body) opt.body = JSON.stringify(body)
+    return fetch(API + '/' + path, opt).then(function (r) {
+      return r.json().catch(function () { return {} }).then(function (d) { return { status: r.status, d: d } })
+    })
+  }
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] }) }
+
+  var MODE = 'login'
+  function view() {
+    if (ME) return meView()
+    var loginTab = MODE === 'login' ? ' on' : ''
+    var regTab = MODE === 'reg' ? ' on' : ''
+    return '' +
+      '<h3>' + (MODE === 'login' ? '登录' : '注册') + '风月科技</h3>' +
+      '<div class="hint">手机号 + 密码，本站不保存明文密码</div>' +
+      '<div class="acctabs"><button id="tabLogin" class="' + loginTab.trim() + '" type="button">登录</button>' +
+      '<button id="tabReg" class="' + regTab.trim() + '" type="button">注册</button></div>' +
+      '<label class="accf"><span>手机号</span><input id="fPhone" inputmode="numeric" maxlength="11" placeholder="11 位手机号"></label>' +
+      (MODE === 'reg' ? '<label class="accf"><span>昵称（可不填）</span><input id="fName" maxlength="20" placeholder="怎么称呼你"></label>' : '') +
+      '<label class="accf"><span>密码</span><input id="fPw" type="password" maxlength="32" placeholder="' + (MODE === 'reg' ? '至少 8 位，字母+数字' : '输入密码') + '"></label>' +
+      '<button class="accsub" id="accGo" type="button">' + (MODE === 'login' ? '登录' : '注册并登录') + '</button>' +
+      '<div class="accmsg" id="accMsg"></div>'
+
+  }
+
+  function meView() {
+    var u = ME
+    var isAdmin = u.role === 'admin'
+    return '' +
+      '<h3>个人中心</h3><div class="hint">风月科技账号</div>' +
+      '<div class="accme">' +
+      '<div class="accrow"><span class="k">手机号</span><b>' + esc(u.displayPhone) + '</b></div>' +
+      '<div class="accrow"><span class="k">昵称</span><b>' + esc(u.name || '未填写') + '</b></div>' +
+      '<div class="accrow"><span class="k">身份</span><b>' + (isAdmin ? '<span class="accpill">管理员</span>' : '普通用户') + '</b></div>' +
+      '<div class="accrow"><span class="k">注册时间</span><b>' + (u.created ? new Date(u.created).toLocaleDateString() : '-') + '</b></div>' +
+      (isAdmin ? '<div class="accrow" style="flex-direction:column;align-items:stretch;gap:8px"><span class="k">用户管理（共 <span id="accTotal">-</span> 人）</span><div class="acclist" id="accList">加载中…</div></div>' : '') +
+      '</div>' +
+      '<div class="accout"><button id="accOut" type="button">退出登录</button></div>' +
+      '<div class="accmsg" id="accMsg"></div>'
+  }
+
+  function paint() {
+    $('accBody').innerHTML = view()
+    var btn = $('accBtn')
+    btn.textContent = ME ? (ME.name || ME.displayPhone) : '登录'
+    btn.className = 'navbtn' + (ME ? ' on' : '')
+    if (ME && ME.role === 'admin') loadUsers()
+  }
+
+  function msg(t, cls) { var m = $('accMsg'); if (m) { m.textContent = t || ''; m.className = 'accmsg' + (cls ? ' ' + cls : '') } }
+
+  function loadUsers() {
+    call('admin/users').then(function (r) {
+      var box = $('accList'); if (!box) return
+      if (!r.d.ok) { box.textContent = r.d.error || '没有权限'; return }
+      $('accTotal').textContent = r.d.total
+      box.innerHTML = r.d.users.map(function (u) {
+        return '<div><span>' + esc(u.name || u.displayPhone) + ' <span style="opacity:.55">' + esc(u.displayPhone) + '</span></span>' +
+          '<b>' + (u.role === 'admin' ? '管理员' : '用户') + '</b></div>'
+      }).join('')
+    })
+  }
+
+  function openAcc() { $('accMask').classList.add('on'); MODE = 'login'; paint(); bind() }
+  function closeAcc() { $('accMask').classList.remove('on') }
+
+  function bind() {
+    var x = $('accX'); if (x) x.onclick = closeAcc
+    var m = $('accMask'); if (m) m.onclick = function (e) { if (e.target === m) closeAcc() }
+    var tl = $('tabLogin'), tr = $('tabReg')
+    if (tl) tl.onclick = function () { MODE = 'login'; paint(); bind() }
+    if (tr) tr.onclick = function () { MODE = 'reg'; paint(); bind() }
+    var go = $('accGo')
+    if (go) go.onclick = submit
+    var ph = $('fPhone'), pw = $('fPw')
+    if (pw) pw.onkeydown = function (e) { if (e.key === 'Enter') submit() }
+    if (ph) ph.onkeydown = function (e) { if (e.key === 'Enter' && pw) pw.focus() }
+    var out = $('accOut'); if (out) out.onclick = logout
+  }
+
+  function submit() {
+    var phone = ($('fPhone') || {}).value || ''
+    var pw = ($('fPw') || {}).value || ''
+    var name = ($('fName') || {}).value || ''
+    phone = phone.replace(/\D/g, '')
+    if (!/^1[3-9]\d{9}$/.test(phone)) return msg('手机号要 11 位，1 开头', 'err')
+    if (pw.length < 8) return msg('密码至少 8 位', 'err')
+    var btn = $('accGo'); if (btn) btn.disabled = true
+    msg(MODE === 'login' ? '登录中…' : '注册中…')
+    var path = MODE === 'login' ? 'login' : 'register'
+    call(path, { phone: phone, password: pw, name: name }).then(function (r) {
+      if (btn) btn.disabled = false
+      if (!r.d.ok) return msg(r.d.error || '出了点问题，再试一次', 'err')
+      setTok(r.d.token); ME = r.d.user
+      paint(); bind()
+      setTimeout(function () { closeAcc() }, 700)
+    }).catch(function () { if (btn) btn.disabled = false; msg('连不上服务器，检查网络', 'err') })
+  }
+
+  function logout() {
+    call('logout', {}, 'POST').catch(function () {})
+    setTok(''); ME = null; paint(); bind()
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var b = $('accBtn'); if (b) b.onclick = openAcc
+    if (tok()) {
+      call('me').then(function (r) {
+        if (r.d && r.d.ok) { ME = r.d.user; paint() } else { setTok('') }
+      }).catch(function () {})
+    }
+  })
+})();
+</script></body>
 </html>
