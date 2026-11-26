@@ -370,17 +370,18 @@
     var mail = '<label class="accf"><span>邮箱</span><input id="fMail" type="email" inputmode="email" maxlength="90" placeholder="name@example.com"></label>'
     var body
     if (TAB === 'login') {
-      body = '<div class="hint">用邮箱和密码进来</div>' + mail +
+      body = '<div class="hint">用邮箱或名字 + 密码进来</div>' +
+        '<label class="accf"><span>邮箱或名字</span><input id="fMail" maxlength="90" placeholder="15279729913@163.com 或 风月同秋"></label>' +
         '<label class="accf"><span>密码</span><input id="fPw" type="password" maxlength="40" placeholder="你的密码"></label>' +
         '<div class="accmsg" id="accMsg"></div>' +
         '<button class="accsub" id="accGo" type="button">登录</button>' +
         '<div class="hint" style="margin:12px 0 0;text-align:center">还没有账号？点上面「注册」</div>'
     } else {
-      body = '<div class="hint">邮箱收验证码 → 设个密码，第一次就是注册</div>' + mail +
+      body = '<div class="hint">起个名字、邮箱收验证码、设个密码，第一次就是注册</div>' +
+        '<label class="accf"><span>名字（登录用）</span><input id="fName" maxlength="20" placeholder="比如 风月同秋"></label>' + mail +
         '<label class="accf"><span>验证码</span><div style="display:flex;gap:8px;align-items:center">' +
         '<input id="fCode" inputmode="numeric" maxlength="6" placeholder="6 位数字" style="flex:1;min-width:0">' +
         '<button class="accsub" id="sendCode" type="button" style="width:auto;padding:0 14px;white-space:nowrap;margin:0">发验证码</button></div></label>' +
-        '<label class="accf"><span>昵称（可不填）</span><input id="fName" maxlength="20" placeholder="怎么称呼你"></label>' +
         '<label class="accf"><span>设置密码</span><input id="fPw" type="password" maxlength="40" placeholder="至少 8 位，字母+数字"></label>' +
         '<div class="accmsg" id="accMsg"></div>' +
         '<button class="accsub" id="accGo" type="button">注册并登录</button>' +
@@ -485,12 +486,13 @@
   function idle(btn, txt) { if (btn) { btn.disabled = false; btn.textContent = txt } }
 
   function submitLogin() {
-    var mail = (($('fMail') || {}).value || '').trim().toLowerCase()
+    var acct = (($('fMail') || {}).value || '').trim()
     var pw = ($('fPw') || {}).value || ''
-    if (!emailOK(mail)) return msg('邮箱格式不对', 'err')
+    if (acct.indexOf('@') >= 0) { if (!emailOK(acct)) return msg('邮箱格式不对', 'err') }
+    else if (acct.length < 2) return msg('填邮箱，或者你的名字', 'err')
     if (pw.length < 1) return msg('填一下密码', 'err')
     var btn = $('accGo'); busy(btn, '登录中…'); msg('')
-    call('login', { email: mail, password: pw }).then(function (r) {
+    call('login', { email: acct, password: pw }).then(function (r) {
       idle(btn, '登录')
       afterLogin(r)
     }).catch(function () { idle(btn, '登录'); msg('连不上服务器，检查网络', 'err') })
@@ -502,6 +504,7 @@
     var name = (($('fName') || {}).value || '').trim()
     var pw = ($('fPw') || {}).value || ''
     if (!emailOK(mail)) return msg('邮箱格式不对', 'err')
+    if (name.length < 2) return msg('起个名字，至少 2 个字', 'err')
     if (code.length !== 6) return msg('验证码是 6 位数字', 'err')
     if (pw.length < 8 || !/[A-Za-z]/.test(pw) || !/\d/.test(pw)) return msg('密码至少 8 位，要字母加数字', 'err')
     var btn = $('accGo'); busy(btn, '注册中…'); msg('')
