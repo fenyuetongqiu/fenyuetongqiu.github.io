@@ -327,8 +327,8 @@
       '<label class="accf"><span>手机号</span><input id="fPhone" inputmode="numeric" maxlength="11" placeholder="11 位手机号"></label>' +
       (MODE === 'reg' ? '<label class="accf"><span>昵称（可不填）</span><input id="fName" maxlength="20" placeholder="怎么称呼你"></label>' : '') +
       '<label class="accf"><span>密码</span><input id="fPw" type="password" maxlength="32" placeholder="' + (MODE === 'reg' ? '至少 8 位，字母+数字' : '输入密码') + '"></label>' +
-      '<button class="accsub" id="accGo" type="button">' + (MODE === 'login' ? '登录' : '注册并登录') + '</button>' +
-      '<div class="accmsg" id="accMsg"></div>'
+      '<div class="accmsg" id="accMsg"></div>' +
+      '<button class="accsub" id="accGo" type="button">' + (MODE === 'login' ? '登录' : '注册并登录') + '</button>'
 
   }
 
@@ -356,7 +356,7 @@
     if (ME && ME.role === 'admin') loadUsers()
   }
 
-  function msg(t, cls) { var m = $('accMsg'); if (m) { m.textContent = t || ''; m.className = 'accmsg' + (cls ? ' ' + cls : '') } }
+  function msg(t, cls) { var m = $('accMsg'); if (m) { m.textContent = t || ''; m.className = 'accmsg' + (cls ? ' ' + cls : ''); if (t) { try { m.scrollIntoView({ block: 'nearest' }) } catch (e) {} } } }
 
   function loadUsers() {
     call('admin/users').then(function (r) {
@@ -394,16 +394,16 @@
     phone = phone.replace(/\D/g, '')
     if (!/^1[3-9]\d{9}$/.test(phone)) return msg('手机号要 11 位，1 开头', 'err')
     if (pw.length < 8) return msg('密码至少 8 位', 'err')
-    var btn = $('accGo'); if (btn) btn.disabled = true
-    msg(MODE === 'login' ? '登录中…' : '注册中…')
+    var btn = $('accGo'); if (btn) { btn.disabled = true; btn.setAttribute('data-t', btn.textContent); btn.textContent = MODE === 'login' ? '登录中…' : '注册中…' }
+    msg('')
     var path = MODE === 'login' ? 'login' : 'register'
     call(path, { phone: phone, password: pw, name: name }).then(function (r) {
-      if (btn) btn.disabled = false
+      if (btn) { btn.disabled = false; btn.textContent = btn.getAttribute('data-t') || (MODE === 'login' ? '登录' : '注册并登录') }
       if (!r.d.ok) return msg(r.d.error || '出了点问题，再试一次', 'err')
       setTok(r.d.token); ME = r.d.user
       paint(); bind()
       setTimeout(function () { closeAcc() }, 700)
-    }).catch(function () { if (btn) btn.disabled = false; msg('连不上服务器，检查网络', 'err') })
+    }).catch(function () { if (btn) { btn.disabled = false; btn.textContent = btn.getAttribute('data-t') || '重试' }; msg('连不上服务器，检查网络', 'err') })
   }
 
   function logout() {
