@@ -409,6 +409,7 @@
     var b = []
     if (p.demoUrl) b.push('<a class="btn sm" href="' + esc(p.demoUrl) + '" target="_blank" rel="noopener">在线体验</a>')
     if (p.demoDownload) b.push('<a class="btn sm ghost" href="' + esc(p.demoDownload) + '" target="_blank" rel="noopener">下载体验版</a>')
+    if (p.demoLink) b.push('<a class="btn sm ghost" href="' + esc(p.demoLink) + '" target="_blank" rel="noopener">下载体验版</a>')
     if (mine) b.push('<button class="btn sm pri" data-dl="' + esc(p.id) + '">下载正式版</button>')
     else if (Number(p.price) > 0) b.push('<a class="btn sm" href="#/p/' + esc(p.id) + '">买正版 ' + money(p.price) + '</a>')
     if (!b.length) b.push('<span class="muted">还在准备</span>')
