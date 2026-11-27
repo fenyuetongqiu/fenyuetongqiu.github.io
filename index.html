@@ -518,7 +518,6 @@
     return '<section class="fade" style="padding-top:44px">' +
       '<div class="head"><div><div class="kicker">MY ACCOUNT</div><h2>我的</h2></div>' +
       '<p>' + esc(ME.name || '') + (ME.role === 'admin' ? ' · 管理员' : '') + (ME.vip ? ' · 终生 VIP' : '') + '</p></div>' +
-      '<div class="two">' +
       '<div class="panel"><h3>我买的产品</h3>' +
       (owns.length ? owns.map(function (o) {
         return '<div class="kv"><span>' + esc(o.productName) + '</span><b><button class="btn sm pri" data-dl="' + o.productId + '">下载</button></b></div>'
@@ -527,7 +526,7 @@
         return '<div class="kv"><span>' + esc(o.productName) + '</span><b><span class="pill wait">等管理员确认</span></b></div>'
       }).join('') : '') +
       '</div>' +
-      '<div class="panel"><h3>账号</h3>' +
+      '<div class="panel" style="margin-top:16px"><h3>账号设置</h3>' +
       '<div class="kv"><span>邮箱</span><b>' + esc(ME.account || '') + '</b></div>' +
       '<div class="kv"><span>注册时间</span><b>' + when(ME.created) + '</b></div>' +
       '<div class="field" style="margin-top:16px"><label>改名字</label><input id="nName" maxlength="20" placeholder="' + esc(ME.name || '') + '"></div>' +
@@ -537,7 +536,7 @@
       '<button class="btn sm" id="doPw" type="button">保存新密码</button>' +
       '<div class="msg" id="msg"></div>' +
       '<button class="btn sm danger" id="doLogout" type="button" style="margin-top:18px">退出登录</button>' +
-      '</div></div></section>'
+      '</div></section>'
   }
 
   function maskAcc(a) {
