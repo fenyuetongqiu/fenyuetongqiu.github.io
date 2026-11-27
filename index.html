@@ -51,6 +51,7 @@
   nav a{padding:8px 13px;border-radius:999px;font-size:14px;color:var(--ink2);transition:.18s}
   nav a:hover{color:var(--ink);background:rgba(255,255,255,.05)}
   nav a.on{color:#0a1018;background:linear-gradient(135deg,var(--c1),var(--c2));font-weight:600}
+  .nbd{display:inline-block;margin-left:4px;padding:0 6px;border-radius:999px;background:var(--c3);color:#08131f;font-size:11px;font-weight:700;line-height:16px}
   .navbtn{padding:8px 15px;border-radius:999px;border:1px solid rgba(255,255,255,.16);
     background:rgba(255,255,255,.04);color:var(--ink);font-size:14px;transition:.18s}
   .navbtn:hover{background:rgba(255,255,255,.1)}
@@ -167,7 +168,8 @@
     .bar{padding:10px 14px;gap:8px;flex-wrap:wrap}
     .logo{font-size:14px;gap:7px;white-space:nowrap;order:1}
     .logo small{display:none}
-    .navbtn{padding:7px 12px;font-size:13px;white-space:nowrap;order:2;margin-left:auto}
+    .nbd{display:inline-block;margin-left:4px;padding:0 6px;border-radius:999px;background:var(--c3);color:#08131f;font-size:11px;font-weight:700;line-height:16px}
+  .navbtn{padding:7px 12px;font-size:13px;white-space:nowrap;order:2;margin-left:auto}
     #nav{order:3;width:100%;display:flex;gap:4px;justify-content:flex-start;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
     #nav::-webkit-scrollbar{display:none}
     #nav a{font-size:13px;padding:6px 10px;white-space:nowrap}
@@ -254,12 +256,29 @@
     document.body.appendChild(d)
     $('payClose').onclick = function () { d.remove(); render() }
     $('paidTip').onclick = function () {
-      this.disabled = true
-      this.textContent = '已经告诉管理员了'
-      var box = document.createElement('div')
-      box.className = 'msg'
-      box.textContent = '把付款截图发给微信 ' + CONTACT.wechat + '，确认后我这边点一下，下载就开了。'
-      this.parentNode.insertBefore(box, this)
+      var btn = this
+      btn.disabled = true
+      btn.textContent = '通知中…'
+      call('order/notify', { orderId: order.id }, 'POST').then(function (r) {
+        var box = document.createElement('div')
+        box.className = 'msg'
+        if (r.d && r.d.ok) {
+          btn.textContent = '已经通知到了'
+          box.textContent = '已经通知给工作室了' + (r.d.mailed === false ? '（邮件没发出去，也可以直接把截图发给微信 ' + CONTACT.wechat + '）' : '') + '，确认后刷新就能下载。'
+        } else {
+          btn.disabled = false
+          btn.textContent = '我付好了'
+          box.textContent = (r.d && r.d.error) || '没通知上，直接把截图发给微信 ' + CONTACT.wechat + ' 也行。'
+        }
+        btn.parentNode.insertBefore(box, btn)
+      }).catch(function () {
+        btn.disabled = false
+        btn.textContent = '我付好了'
+        var box = document.createElement('div')
+        box.className = 'msg'
+        box.textContent = '连不上服务器，把截图发给微信 ' + CONTACT.wechat + ' 也行。'
+        btn.parentNode.insertBefore(box, btn)
+      })
     }
   }
 
@@ -298,12 +317,13 @@
   function go(p) { location.hash = '#/' + p }
 
   function renderNav(cur) {
+    var waitN = (ME && ME.role === 'admin' && ADM && ADM.wait) ? ' <b class="nbd">' + ADM.wait + '</b>' : ''
     var items = [['', '首页'], ['products', '产品'], ['about', '关于'], ['contact', '联系']]
     var h = items.map(function (it) {
       var on = (cur === it[0] || (it[0] === 'products' && cur === 'p')) ? ' class="on"' : ''
       return '<a href="#/' + it[0] + '"' + on + '>' + it[1] + '</a>'
     }).join('')
-    if (ME && ME.role === 'admin') h += '<a href="#/admin"' + (cur === 'admin' ? ' class="on"' : '') + '>管理</a>'
+    if (ME && ME.role === 'admin') h += '<a href="#/admin"' + (cur === 'admin' ? ' class="on"' : '') + '>管理' + waitN + '</a>'
     $('nav').innerHTML = h
     var b = $('accBtn')
     if (ME) { b.textContent = ME.name || '我的'; b.onclick = function () { go('me') } }
