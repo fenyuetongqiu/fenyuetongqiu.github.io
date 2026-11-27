@@ -972,7 +972,7 @@
   function loadAdmin() {
     if (!ME || ME.role !== 'admin') { ADM = { orders: [], wait: 0 }; return Promise.resolve() }
     return call('admin/orders').then(function (r) {
-      if (r.d && r.d.ok) ADM = { orders: r.d.orders || [], wait: r.d.wait || 0 }
+      if (r.d && r.d.ok) ADM = { orders: r.d.orders || [], wait: r.d.wait || 0, overview: ADM.overview }
     }).catch(function () {})
   }
 
@@ -987,7 +987,7 @@
 
   function loadOverview() {
     if (!ME || ME.role !== 'admin') return Promise.resolve()
-    return call('admin/overview').then(function (r) { ADM.overview = r }).catch(function () {})
+    return call('admin/overview').then(function (r) { if (r.d && r.d.ok) ADM.overview = r.d }).catch(function () {})
   }
 
   function boot() {
