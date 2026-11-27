@@ -540,6 +540,33 @@
       '</div></div></section>'
   }
 
+  function maskAcc(a) {
+    a = String(a || '')
+    var at = a.indexOf('@')
+    if (at < 0) return a
+    var n = a.slice(0, at), d = a.slice(at)
+    if (n.length <= 3) return n + '***' + d
+    return n.slice(0, 3) + '***' + d
+  }
+
+  function whoLists(ov) {
+    if (!ov) return ''
+    var us = ov.userList || []
+    var pp = ov.people || []
+    var h = '<div class="two" style="margin-top:18px">'
+    h += '<div><div class="muted" style="margin-bottom:8px">注册名单（都是谁注册的）</div>'
+    h += us.length ? '<table><thead><tr><th>名字</th><th>账号</th><th>身份</th><th>注册</th></tr></thead><tbody>' + us.map(function (u) {
+      return '<tr><td>' + esc(u.name || '—') + (u.vip ? ' <span class="pill">VIP</span>' : '') + '</td><td>' + esc(maskAcc(u.account)) + '</td><td>' + (u.role === 'admin' ? '管理员' : '普通') + '</td><td>' + when(u.created) + '</td></tr>'
+    }).join('') + '</tbody></table>' : '<p class="muted">还没有人注册</p>'
+    h += '</div>'
+    h += '<div><div class="muted" style="margin-bottom:8px">最近来过的人（登录状态才算）</div>'
+    h += pp.length ? '<table><thead><tr><th>名字</th><th>身份</th><th>来过</th><th>最近</th></tr></thead><tbody>' + pp.map(function (x) {
+      return '<tr><td>' + esc(x.name || '—') + '</td><td>' + (x.role === 'admin' ? '管理员' : '普通') + '</td><td>' + (x.n || 1) + ' 次</td><td>' + when(x.ts) + '</td></tr>'
+    }).join('') + '</tbody></table>' : '<p class="muted">还没有登录过的访客</p>'
+    h += '</div></div>'
+    return h
+  }
+
   function pageAdmin() {
     if (!ME || ME.role !== 'admin') return '<section class="fade" style="padding-top:44px"><div class="empty">这页只有管理员能进。</div></section>'
     var os = ADM.orders || []
@@ -559,7 +586,7 @@
         '<div class="stat"><b>' + (ov.today || 0) + '</b><span>今天浏览</span></div>' +
         '<div class="stat"><b>' + (ov.users || 0) + '</b><span>注册用户</span></div>' +
         '<div class="stat"><b>' + (ov.vip || 0) + '</b><span>终生 VIP</span></div>' +
-        '</div>' + (bars ? '<div style="margin-top:14px"><div class="kicker" style="font-size:10px">最近 7 天</div>' + bars + '</div>' : '')
+        '</div>' + (bars ? '<div style="margin-top:14px"><div class="kicker" style="font-size:10px">最近 7 天</div>' + bars + '</div>' : '') + whoLists(ov)
         : '<p class="muted">正在读数据…</p>') +
       '</div>'
     return '<section class="fade" style="padding-top:44px">' +
