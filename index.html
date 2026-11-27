@@ -405,7 +405,7 @@
   }
 
   function demoBlock(p) {
-    var mine = ((MINE && MINE.orders) || []).filter(function (o) { return o.productId === p.id && o.status === 'paid' })[0]
+    var mine = (window.MYORDERS || []).filter(function (o) { return o.productId === p.id && o.status === 'paid' })[0]
     var b = []
     if (p.demoUrl) b.push('<a class="btn sm" href="' + esc(p.demoUrl) + '" target="_blank" rel="noopener">在线体验</a>')
     if (p.demoDownload) b.push('<a class="btn sm ghost" href="' + esc(p.demoDownload) + '" target="_blank" rel="noopener">下载体验版</a>')
