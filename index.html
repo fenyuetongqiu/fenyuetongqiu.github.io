@@ -998,7 +998,7 @@
         else { setTok(''); ME = null }
       }).catch(function () {})
     }
-    chain.then(loadSite).then(loadMine).then(loadAdmin).then(render)
+    chain.then(loadSite).then(loadMine).then(loadAdmin).then(loadOverview).then(render)
   }
 
   var lastHash = ''
