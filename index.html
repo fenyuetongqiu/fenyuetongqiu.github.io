@@ -184,6 +184,10 @@
     .card{padding:18px}
   }
   @media (prefers-reduced-motion:reduce){.orb{animation:none}.fade{animation:none}}
+  .bars{display:flex;gap:8px;align-items:flex-end;margin-top:8px}
+  .bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px}
+  .bar i{display:block;width:100%;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,var(--c1),var(--c2));opacity:.85}
+  .bar span{font-size:10.5px;color:var(--mut);white-space:nowrap}
 </style>
 </head>
 <body>
@@ -539,9 +543,29 @@
   function pageAdmin() {
     if (!ME || ME.role !== 'admin') return '<section class="fade" style="padding-top:44px"><div class="empty">这页只有管理员能进。</div></section>'
     var os = ADM.orders || []
+    var ov = ADM.overview || null
+    var bars = ''
+    if (ov && ov.days) {
+      var mx = 1
+      ov.days.forEach(function (d) { if (d.n > mx) mx = d.n })
+      bars = '<div class="bars">' + ov.days.map(function (d) {
+        var h = Math.max(4, Math.round(d.n / mx * 62))
+        return '<div class="bar"><i style="height:' + h + 'px"></i><span>' + d.day.slice(5) + '</span></div>'
+      }).join('') + '</div>'
+    }
+    var ovHtml = '<div class="panel" style="margin-bottom:16px"><h3>网站数据</h3>' +
+      (ov ? '<div class="stats" style="grid-template-columns:repeat(4,1fr)">' +
+        '<div class="stat"><b>' + (ov.uv || 0) + '</b><span>浏览人次</span></div>' +
+        '<div class="stat"><b>' + (ov.today || 0) + '</b><span>今天浏览</span></div>' +
+        '<div class="stat"><b>' + (ov.users || 0) + '</b><span>注册用户</span></div>' +
+        '<div class="stat"><b>' + (ov.vip || 0) + '</b><span>终生 VIP</span></div>' +
+        '</div>' + (bars ? '<div style="margin-top:14px"><div class="kicker" style="font-size:10px">最近 7 天</div>' + bars + '</div>' : '')
+        : '<p class="muted">正在读数据…</p>') +
+      '</div>'
     return '<section class="fade" style="padding-top:44px">' +
       '<div class="head"><div><div class="kicker">ADMIN</div><h2>管理</h2></div>' +
       '<p>待确认 ' + (ADM.wait || 0) + ' 单 · 已成交 ' + ((ADM.stats && ADM.stats.paid) || 0) + ' 单 / ' + money((ADM.stats && ADM.stats.sum) || 0) + ' · 在售 ' + (SITE.products || []).length + ' 个</p></div>' +
+      ovHtml +
       '<div class="two">' +
       '<div class="panel"><h3>上架 / 改产品</h3>' +
       '<input id="pId" type="hidden">' +
@@ -952,6 +976,20 @@
     }).catch(function () {})
   }
 
+  function reportVisit() {
+    try {
+      var k = 'fy-visit-' + new Date().toISOString().slice(0, 10)
+      if (localStorage.getItem(k)) return
+      localStorage.setItem(k, '1')
+    } catch (e) {}
+    call('visit', {}, 'POST').catch(function () {})
+  }
+
+  function loadOverview() {
+    if (!ME || ME.role !== 'admin') return Promise.resolve()
+    return call('admin/overview').then(function (r) { ADM.overview = r }).catch(function () {})
+  }
+
   function boot() {
     var chain = Promise.resolve()
     if (tok()) {
@@ -971,7 +1009,7 @@
     render()
     var jobs = []
     if (r.page === 'me') jobs = [loadMine()]
-    else if (r.page === 'admin') jobs = [loadAdmin(), loadSite()]
+    else if (r.page === 'admin') jobs = [loadAdmin(), loadSite(), loadOverview()]
     else if (r.page === 'products') jobs = [loadSite(), loadMine()]
     if (!jobs.length) return
     Promise.all(jobs).then(function () {
@@ -979,6 +1017,7 @@
     })
   })
 
+  reportVisit()
   boot()
 })()
 </script>
