@@ -150,6 +150,13 @@
     margin:-4px 0 14px;cursor:zoom-in;background:rgba(255,255,255,.04);border:1px solid var(--line)}
   .pimg:hover{filter:brightness(1.08)}
   .imgprev{width:100%;max-height:200px;object-fit:cover;border-radius:12px;border:1px solid var(--line);margin:10px 0}
+  .lightbox.pay{align-items:center;justify-content:center}
+  .paycard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;max-width:340px;width:calc(100% - 40px);text-align:center;box-shadow:0 30px 80px -30px #000}
+  .paycard h3{margin:0 0 6px;font-size:20px}
+  .paycard .qrcode{width:220px;height:220px;object-fit:contain;background:#fff;border-radius:12px;margin:10px auto;display:block}
+  .paycard .qrbox{width:220px;height:220px;margin:10px auto;border:1px dashed var(--line);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;color:var(--ink2)}
+  .paycard .btn{width:100%;margin-top:8px}
+  .payprev img.imgprev{max-width:200px}
   .lightbox{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;
     background:rgba(3,5,9,.9);padding:24px;cursor:zoom-out;animation:fade .2s ease both}
   .lightbox img{max-width:min(1100px,96vw);max-height:88vh;border-radius:14px;
@@ -228,6 +235,34 @@
 
   var CONTACT = { phone: '15279729913', wechat: '15279729913', qq: '15279729913', mail: '15279729913@163.com' }
 
+  function payModal(order) {
+    var d = document.createElement('div')
+    d.className = 'lightbox pay'
+    var img = SITE.payUrl
+      ? '<img class="qrcode" src="' + esc(SITE.payUrl) + '" alt="收款码">'
+      : '<div class="qrbox">还没放收款码<br><span class="muted">先微信/QQ 联系 ' + esc(CONTACT.wechat) + '</span></div>'
+    d.innerHTML = '<div class="paycard">' +
+      '<h3>付款 ' + money(order.price) + '</h3>' +
+      '<p class="muted">订单号 ' + esc(order.id) + ' · ' + esc(order.productName) + '</p>' +
+      img +
+      '<p class="muted">' + (SITE.payNote ? esc(SITE.payNote) : '扫码付完，把付款截图发我微信，确认后就能下载。') + '</p>' +
+      '<p class="muted">付完点下面这个按钮，我就知道是谁付的：</p>' +
+      '<button class="btn pri" id="paidTip" type="button">我付好了</button>' +
+      '<button class="btn ghost" id="payClose" type="button">关掉</button>' +
+      '</div>'
+    d.onclick = function (e) { if (e.target === d) d.remove() }
+    document.body.appendChild(d)
+    $('payClose').onclick = function () { d.remove(); render() }
+    $('paidTip').onclick = function () {
+      this.disabled = true
+      this.textContent = '已经告诉管理员了'
+      var box = document.createElement('div')
+      box.className = 'msg'
+      box.textContent = '把付款截图发给微信 ' + CONTACT.wechat + '，确认后我这边点一下，下载就开了。'
+      this.parentNode.insertBefore(box, this)
+    }
+  }
+
   function $(id) { return document.getElementById(id) }
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -278,9 +313,9 @@
   /* ---------- 页面 ---------- */
   function pageHome() {
     return '<div class="hero fade">' +
-      '<span class="eyebrow"><i></i>一个人的工作室 · 2026</span>' +
+      '<span class="eyebrow"><i></i>风月の工作室 · 2026</span>' +
       '<h1>你说要什么，<br><em>我们就把它做出来</em>。</h1>' +
-      '<p class="sub">一个人的工作室。你说要个什么，从想法、写代码、上线到打包成 exe / apk，全在这一间屋子里做完；做完你天天用，不合手就接着改。不接「高大上」，只做能用的东西。</p>' +
+      '<p class="sub">风月の工作室。你说要个什么，从想法、写代码、上线到打包成 exe / apk，全在这一间屋子里做完；做完你天天用，不合手就接着改。不接「高大上」，只做能用的东西。</p>' +
       '<div class="cta"><a class="btn pri" href="#/products">看看产品 →</a>' +
       '<a class="btn" href="#/contact">找我们聊聊</a></div>' +
       '<div class="stats">' +
@@ -293,14 +328,22 @@
       '<section class="fade"><div class="head"><div><div class="kicker">WHAT WE DO</div><h2>我们能干什么</h2></div>' +
       '<p>一句话说清：你想要什么，我们从头做给你</p></div>' +
       '<div class="cards">' +
-      '<article class="card"><h3>做工具</h3><p>点菜、记账、排班、对账——家里和小店天天要用、手机上就能开的那种。</p>' +
-      '<div class="tags"><span class="tag">网页</span><span class="tag">手机</span></div></article>' +
-      '<article class="card"><h3>做游戏</h3><p>单文件网页游戏，双击就玩、不装任何东西；发给谁都能跑，手机也能玩。</p>' +
-      '<div class="tags"><span class="tag">网页游戏</span><span class="tag">单文件</span></div></article>' +
-      '<article class="card"><h3>做桌面软件</h3><p>真要装进 Windows 的也有：原生窗口、自己的图标、开机就能点开，不是快捷方式。</p>' +
-      '<div class="tags"><span class="tag">exe</span><span class="tag">原生壳</span></div></article>' +
-      '<article class="card"><h3>做手机 App</h3><p>安卓安装包直接发你，装完是个独立 App；跟网页、电脑共用一套数据。</p>' +
+      '<article class="card"><h3>做家里 / 小店的工具</h3><p>点菜、记账、排班、对账、库存、会员卡——天天要用、手机上就能开的那种；两个人同时用也不会打架。</p>' +
+      '<div class="tags"><span class="tag">网页</span><span class="tag">手机</span><span class="tag">多人共用</span></div></article>' +
+      '<article class="card"><h3>做网页小游戏</h3><p>单文件、双击就玩、不装任何东西；发给谁都能跑，手机也能玩，还能做成朋友之间互相打的联机小局。</p>' +
+      '<div class="tags"><span class="tag">网页游戏</span><span class="tag">单文件</span><span class="tag">双人</span></div></article>' +
+      '<article class="card"><h3>做 Windows 软件</h3><p>真要装进电脑的也有：原生窗口、自己的图标、开机就能点开，不是套个浏览器壳的「快捷方式」。</p>' +
+      '<div class="tags"><span class="tag">exe</span><span class="tag">安装包</span></div></article>' +
+      '<article class="card"><h3>做安卓 App</h3><p>安卓安装包直接发你，装完是独立 App；跟网页、电脑共用一套数据，账号一登就同步。</p>' +
       '<div class="tags"><span class="tag">apk</span><span class="tag">云端同步</span></div></article>' +
+      '<article class="card"><h3>做账号系统</h3><p>注册登录、邮箱验证码、改密码、分角色（管理员 / 普通用户）、查看已购、防止到处转卖——一整套现成的。</p>' +
+      '<div class="tags"><span class="tag">登录</span><span class="tag">权限</span><span class="tag">防倒卖</span></div></article>' +
+      '<article class="card"><h3>做数据和导出</h3><p>把散在各处的东西归到一起：表格自动整理、每月报表、导出 Excel、按时间看趋势（比如家里吃了啥、花在哪儿）。</p>' +
+      '<div class="tags"><span class="tag">报表</span><span class="tag">Excel</span><span class="tag">统计</span></div></article>' +
+      '<article class="card"><h3>接 AI 的活</h3><p>让电脑自己读文件、整理记录、按你说的写初稿；也能把 AI 接到你现有的网页或流程里当助手。</p>' +
+      '<div class="tags"><span class="tag">AI</span><span class="tag">自动化</span></div></article>' +
+      '<article class="card"><h3>改别人的东西 / 救火</h3><p>手里有个做了一半没人管的网页、小程序、脚本？先看懂再动，能修的修，修不动会直说，不糊弄。</p>' +
+      '<div class="tags"><span class="tag">接手</span><span class="tag">维护</span><span class="tag">按小时</span></div></article>' +
       '</div></section>' +
       '<section class="fade"><div class="head"><div><div class="kicker">HOW WE WORK</div><h2>怎么干</h2></div>' +
       '<p>四步，能跑起来才算数</p></div>' +
@@ -365,7 +408,7 @@
     return '<section class="fade" style="padding-top:44px">' +
       '<div class="head"><div><div class="kicker">ABOUT</div><h2>关于</h2></div><p>做出来的才算</p></div>' +
       '<div class="two"><div class="panel"><p class="quote">「家里缺什么，就做一个什么。」</p>' +
-      '<p class="muted">风月科技是个一个人的工作室：一个人出想法、一个 AI 写代码，从零到上线全在本地完成。没有外包、没有中间层，所以你提的要求能直接落到代码里。</p>' +
+      '<p class="muted">风月科技是「风月の工作室」：一个人出想法、一个 AI 写代码，从零到上线全在本地完成。没有外包、没有中间层，所以你提的要求能直接落到代码里。</p>' +
       '<p class="muted">我们不做「概念」，只做能天天打开的东西：给妈妈的点菜小厨房、随时能开一局的网页游戏、把记忆存下来的小系统。</p></div>' +
       '<div class="panel"><h3>能做到的</h3>' +
       '<div class="kv"><span>网页工具 / 小游戏</span><b>单文件，双击就开</b></div>' +
@@ -421,7 +464,7 @@
     var waits = MYORDERS.filter(function (o) { return o.status === 'wait' })
     return '<section class="fade" style="padding-top:44px">' +
       '<div class="head"><div><div class="kicker">MY ACCOUNT</div><h2>我的</h2></div>' +
-      '<p>' + esc(ME.name || '') + (ME.role === 'admin' ? ' · 管理员' : '') + '</p></div>' +
+      '<p>' + esc(ME.name || '') + (ME.role === 'admin' ? ' · 管理员' : '') + (ME.vip ? ' · 终生 VIP' : '') + '</p></div>' +
       '<div class="two">' +
       '<div class="panel"><h3>我买的产品</h3>' +
       (owns.length ? owns.map(function (o) {
@@ -449,7 +492,7 @@
     var os = ADM.orders || []
     return '<section class="fade" style="padding-top:44px">' +
       '<div class="head"><div><div class="kicker">ADMIN</div><h2>管理</h2></div>' +
-      '<p>待确认订单 ' + (ADM.wait || 0) + ' 单 · 在售 ' + (SITE.products || []).length + ' 个</p></div>' +
+      '<p>待确认 ' + (ADM.wait || 0) + ' 单 · 已成交 ' + ((ADM.stats && ADM.stats.paid) || 0) + ' 单 / ' + money((ADM.stats && ADM.stats.sum) || 0) + ' · 在售 ' + (SITE.products || []).length + ' 个</p></div>' +
       '<div class="two">' +
       '<div class="panel"><h3>上架 / 改产品</h3>' +
       '<input id="pId" type="hidden">' +
@@ -467,6 +510,22 @@
       '<div class="cardact"><button class="btn pri" id="pSave" type="button">保存</button>' +
       '<button class="btn ghost" id="pClear" type="button">清空表单</button></div>' +
       '<div class="msg" id="msg"></div></div>' +
+      '<div class="panel"><h3>收款码（微信）</h3>' +
+      (SITE.payUrl ? '<div class="payprev"><img class="imgprev" src="' + esc(SITE.payUrl) + '"></div>' : '<p class="muted">还没放收款码，买家下单后只能看到联系方式。</p>') +
+      '<div class="field"><label>换一张收款码</label><input id="payFile" type="file" accept="image/*" style="padding:9px 12px"></div>' +
+      '<div class="field"><label>付款提示（可选）</label><input id="payNote" maxlength="60" placeholder="扫码付完把截图发微信，10 分钟内确认"></div>' +
+      '<button class="btn" id="paySave" type="button">保存收款码</button>' +
+      '<div class="msg" id="msg3"></div></div>' +
+      '<div class="panel"><h3>送人：免费给产品 / 终生 VIP</h3>' +
+      '<div class="field"><label>给谁（邮箱或名字）</label><input id="gWho" maxlength="60" placeholder="15279729913@163.com 或 风月同秋"></div>' +
+      '<div class="field"><label>免费送哪个产品</label><select id="gProd">' + ((SITE.products || []).map(function (p) {
+        return '<option value="' + esc(p.id) + '">' + esc(p.name) + '</option>'
+      }).join('') || '<option value="">还没产品</option>') + '</select></div>' +
+      '<div class="cardact"><button class="btn pri" id="gSend" type="button">免费送他</button>' +
+      '<button class="btn" id="vipOn" type="button">开终生 VIP</button>' +
+      '<button class="btn ghost" id="vipOff" type="button">关掉 VIP</button></div>' +
+      '<p class="muted">终生 VIP = 站里所有产品不花钱直接能下。</p>' +
+      '<div class="msg" id="msg4"></div></div>' +
       '<div class="panel"><h3>发公告</h3>' +
       '<div class="field"><label>内容（最近 3 条显示在产品页顶部）</label><textarea id="nText" maxlength="200" placeholder="新品上线，本月 8 折"></textarea></div>' +
       '<button class="btn" id="nSend" type="button">发出去</button>' +
@@ -561,8 +620,8 @@
         call('order/create', { productId: b.getAttribute('data-buy') }).then(function (r) {
           b.disabled = false; b.textContent = old
           if (!r.d.ok) return alert(r.d.error || '下单失败')
-          alert('下单成功！等我们确认收款（微信/QQ ' + CONTACT.qq + '），确认后这里就会出现下载按钮。')
-          loadMine().then(render)
+          payModal(r.d.order)
+          loadMine().then(function () { })
         }).catch(function () { b.disabled = false; b.textContent = old; alert('连不上服务器') })
       }
     })
@@ -607,6 +666,48 @@
         }).catch(function () { alert('连不上服务器') })
       }
     })
+
+    var paySave = $('paySave')
+    if (paySave) paySave.onclick = function () {
+      var f = $('payFile')
+      var note = ($('payNote') || {}).value || ''
+      var go2 = function (data) {
+        paySave.disabled = true
+        call('admin/pay', { data: data || '', note: note }, 'POST').then(function (r) {
+          paySave.disabled = false
+          if (!r.d.ok) return say(r.d.error || '存不上', true, $('msg3'))
+          say('存好了', false, $('msg3'))
+          loadSite().then(render)
+        }).catch(function () { paySave.disabled = false; say('连不上服务器', true, $('msg3')) })
+      }
+      if (f && f.files && f.files[0]) shrink(f.files[0], 900, 0.85, function (d) { go2(d) })
+      else go2('')
+    }
+
+    var gSend = $('gSend')
+    if (gSend) gSend.onclick = function () {
+      var who2 = ($('gWho') || {}).value || ''
+      var pid = ($('gProd') || {}).value || ''
+      if (!who2.trim()) return say('写个邮箱或名字', true, $('msg4'))
+      gSend.disabled = true
+      call('admin/grant', { email: who2.trim(), name: who2.trim(), productId: pid }, 'POST').then(function (r) {
+        gSend.disabled = false
+        if (!r.d.ok) return say(r.d.error || '送不了', true, $('msg4'))
+        say('送好了：' + (r.d.note || '已经可以下载了'), false, $('msg4'))
+      }).catch(function () { gSend.disabled = false; say('连不上服务器', true, $('msg4')) })
+    }
+
+    var vipOn = $('vipOn'), vipOff = $('vipOff')
+    function setVip(on) {
+      var who2 = ($('gWho') || {}).value || ''
+      if (!who2.trim()) return say('写个邮箱或名字', true, $('msg4'))
+      call('admin/vip', { email: who2.trim(), name: who2.trim(), on: on }, 'POST').then(function (r) {
+        if (!r.d.ok) return say(r.d.error || '改不了', true, $('msg4'))
+        say(on ? '开好了：终生 VIP' : 'VIP 关掉了', false, $('msg4'))
+      }).catch(function () { say('连不上服务器', true, $('msg4')) })
+    }
+    if (vipOn) vipOn.onclick = function () { setVip(true) }
+    if (vipOff) vipOff.onclick = function () { setVip(false) }
 
     Array.prototype.forEach.call(document.querySelectorAll('[data-paid]'), function (b) {
       b.onclick = function () { setOrder(b.getAttribute('data-paid'), 'paid') }
