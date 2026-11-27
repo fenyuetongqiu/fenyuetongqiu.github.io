@@ -318,7 +318,7 @@
 
   function renderNav(cur) {
     var waitN = (ME && ME.role === 'admin' && ADM && ADM.wait) ? ' <b class="nbd">' + ADM.wait + '</b>' : ''
-    var items = [['', '首页'], ['products', '产品'], ['about', '关于'], ['contact', '联系']]
+    var items = [['', '首页'], ['products', '产品'], ['download', '下载'], ['about', '关于'], ['contact', '联系']]
     var h = items.map(function (it) {
       var on = (cur === it[0] || (it[0] === 'products' && cur === 'p')) ? ' class="on"' : ''
       return '<a href="#/' + it[0] + '"' + on + '>' + it[1] + '</a>'
@@ -402,6 +402,34 @@
     return '<section class="fade" style="padding-top:44px">' + bar +
       '<div class="head"><div><div class="kicker">PRODUCTS</div><h2>产品</h2></div>' +
       '<p>买过的可以反复下，不用再付第二次</p></div>' + body + '</section>'
+  }
+
+  function demoBlock(p) {
+    var mine = ((MINE && MINE.orders) || []).filter(function (o) { return o.productId === p.id && o.status === 'paid' })[0]
+    var b = []
+    if (p.demoUrl) b.push('<a class="btn sm" href="' + esc(p.demoUrl) + '" target="_blank" rel="noopener">在线体验</a>')
+    if (p.demoDownload) b.push('<a class="btn sm ghost" href="' + esc(p.demoDownload) + '" target="_blank" rel="noopener">下载体验版</a>')
+    if (mine) b.push('<button class="btn sm pri" data-dl="' + esc(p.id) + '">下载正式版</button>')
+    else if (Number(p.price) > 0) b.push('<a class="btn sm" href="#/p/' + esc(p.id) + '">买正版 ' + money(p.price) + '</a>')
+    if (!b.length) b.push('<span class="muted">还在准备</span>')
+    return b.join(' ')
+  }
+
+  function pageDownload() {
+    var list = SITE.products || []
+    return '<section class="fade" style="padding-top:44px">' +
+      '<div class="head"><div><div class="kicker">DOWNLOAD</div><h2>下载 / 体验</h2></div>' +
+      '<p>先免费试，觉得好再买；买过的直接在「我的」里下</p></div>' +
+      (list.length ? '<div class="cards">' + list.map(function (p) {
+        return '<article class="card">' +
+          '<h3>' + esc(p.name) + (p.ver ? ' <span class="tag">v' + esc(p.ver) + '</span>' : '') + '</h3>' +
+          '<p>' + esc(p.desc || '') + '</p>' +
+          '<div class="cardact">' + demoBlock(p) + '</div></article>'
+      }).join('') + '</div>' : '<div class="empty">还没有能下的东西。</div>') +
+      '<div class="panel" style="margin-top:18px"><h3>怎么装</h3>' +
+      '<div class="kv"><span>安卓</span><b>下载 apk → 点开安装（可能提示「未知来源」，允许一次）</b></div>' +
+      '<div class="kv"><span>电脑</span><b>下载安装包 exe → 一路下一步</b></div>' +
+      '<div class="kv"><span>网页版</span><b>点「在线体验」直接用，不用装</b></div></div></section>'
   }
 
   function pageProduct(id) {
@@ -527,6 +555,8 @@
       '<div class="cardact" style="margin-top:8px"><button class="btn sm ghost" id="pImgClear" type="button">去掉图片</button></div></div>' +
       '<div class="row"><div class="field"><label>安装包在 COS 里的路径</label><input id="pFile" maxlength="200" placeholder="files/cook-1.0.apk"></div>' +
       '<div class="field"><label>下载显示的文件名</label><input id="pFileName" maxlength="120" placeholder="宝贝之家小厨房-1.0.apk"></div></div>' +
+      '<div class="row"><div class="field"><label>体验版链接（网页 demo，可不填）</label><input id="pDemoUrl" maxlength="300" placeholder="https://fenyuetongqiu.github.io/cook-site/"></div>' +
+      '<div class="field"><label>体验版文件（COS 路径，可不填）</label><input id="pDemo" maxlength="300" placeholder="app/demo.zip"></div></div>' +
       '<div class="cardact"><button class="btn pri" id="pSave" type="button">保存</button>' +
       '<button class="btn ghost" id="pClear" type="button">清空表单</button></div>' +
       '<div class="msg" id="msg"></div></div>' +
@@ -588,6 +618,7 @@
     var html
     if (cur === '') html = pageHome()
     else if (cur === 'products') html = pageProducts()
+    else if (cur === 'download') html = pageDownload()
     else if (cur === 'p') html = pageProduct(r.arg)
     else if (cur === 'about') html = pageAbout()
     else if (cur === 'contact') html = pageContact()
@@ -657,7 +688,7 @@
         go('admin')
         setTimeout(function () {
           ;[['pId', p.id], ['pName', p.name], ['pPrice', p.price], ['pVer', p.ver], ['pTag', p.tag],
-            ['pDesc', p.desc], ['pFile', p.file], ['pFileName', p.fileName]].forEach(function (kv) {
+            ['pDesc', p.desc], ['pFile', p.file], ['pFileName', p.fileName], ['pDemoUrl', p.demoUrl], ['pDemo', p.demo]].forEach(function (kv) {
             var e = $(kv[0]); if (e) e.value = kv[1] == null ? '' : kv[1]
           })
           IMG = { newData: null, oldKey: p.img || '' }
@@ -849,6 +880,8 @@
         file: ($('pFile') || {}).value || '',
         fileName: ($('pFileName') || {}).value || '',
         img: IMG.newData === '' ? '' : (IMG.newData ? '__upload__' : IMG.oldKey),
+        demoUrl: ($('pDemoUrl') || {}).value || '',
+        demo: ($('pDemo') || {}).value || '',
       }
       if (!body.name.trim()) return say('产品得有个名字', true)
       sv.disabled = true
@@ -864,7 +897,7 @@
           if (!r.d.ok) return say(r.d.error || '存不上', true)
           say('存好了')
           IMG = { newData: null, oldKey: '' }
-          ;['pId', 'pName', 'pPrice', 'pVer', 'pTag', 'pDesc', 'pFile', 'pFileName', 'pImgFile'].forEach(function (k) { var e = $(k); if (e) e.value = '' })
+          ;['pId', 'pName', 'pPrice', 'pVer', 'pTag', 'pDesc', 'pFile', 'pFileName', 'pImgFile', 'pDemoUrl', 'pDemo'].forEach(function (k) { var e = $(k); if (e) e.value = '' })
           var box = $('pImgBox'); if (box) box.innerHTML = ''
           loadSite().then(render)
         }).catch(function (e) { sv.disabled = false; say(e.message || '连不上服务器', true) })
