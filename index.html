@@ -165,12 +165,13 @@
   @media (max-width:760px){
     html,body{overflow-x:hidden;max-width:100%}
     .bg{overflow:hidden}
-    .bar{padding:10px 14px;gap:8px;flex-wrap:wrap}
-    .logo{font-size:14px;gap:7px;white-space:nowrap;order:1}
+    .bar{display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"logo . btn" "nav nav nav";
+      gap:8px 10px;padding:10px 14px;align-items:center}
+    .logo{grid-area:logo;font-size:14px;gap:7px;white-space:nowrap;margin:0}
     .logo small{display:none}
     .nbd{display:inline-block;margin-left:4px;padding:0 6px;border-radius:999px;background:var(--c3);color:#08131f;font-size:11px;font-weight:700;line-height:16px}
-  .navbtn{padding:7px 12px;font-size:13px;white-space:nowrap;order:2;margin-left:auto}
-    #nav{order:3;width:100%;display:flex;gap:4px;justify-content:flex-start;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+    .navbtn{grid-area:btn;justify-self:end;padding:7px 12px;font-size:13px;white-space:nowrap;margin:0}
+    #nav{grid-area:nav;width:auto;margin:0;display:flex;gap:4px;justify-content:flex-start;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
     #nav::-webkit-scrollbar{display:none}
     #nav a{font-size:13px;padding:6px 10px;white-space:nowrap}
     main{padding:0 14px 70px}
