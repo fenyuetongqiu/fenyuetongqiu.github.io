@@ -556,7 +556,8 @@
     var h = '<div class="two" style="margin-top:18px">'
     h += '<div><div class="muted" style="margin-bottom:8px">注册名单（都是谁注册的）</div>'
     h += us.length ? '<table><thead><tr><th>名字</th><th>账号</th><th>身份</th><th>注册</th></tr></thead><tbody>' + us.map(function (u) {
-      return '<tr><td>' + esc(u.name || '—') + (u.vip ? ' <span class="pill">VIP</span>' : '') + '</td><td>' + esc(maskAcc(u.account)) + '</td><td>' + (u.role === 'admin' ? '管理员' : '普通') + '</td><td>' + when(u.created) + '</td></tr>'
+      var vtxt = u.vip ? (' <span class="pill ok">' + esc(u.vipText || '会员') + (u.vipDays > 0 ? ' · 剩 ' + u.vipDays + ' 天' : '') + '</span>') : ''
+      return '<tr><td>' + esc(u.name || '—') + vtxt + '</td><td>' + esc(maskAcc(u.account)) + '</td><td>' + (u.role === 'admin' ? '管理员' : '普通') + '</td><td>' + when(u.created) + '</td></tr>'
     }).join('') + '</tbody></table>' : '<p class="muted">还没有人注册</p>'
     h += '</div>'
     h += '<div><div class="muted" style="margin-bottom:8px">最近来过的人（登录状态才算）</div>'
@@ -605,7 +606,10 @@
       '<input id="pImgFile" type="file" accept="image/*" style="padding:9px 12px">' +
       '<div id="pImgBox"></div>' +
       '<div class="cardact" style="margin-top:8px"><button class="btn sm ghost" id="pImgClear" type="button">去掉图片</button></div></div>' +
-      '<div class="row"><div class="field"><label>安装包在 COS 里的路径</label><input id="pFile" maxlength="200" placeholder="files/cook-1.0.apk"></div>' +
+      '<div class="field"><label>装包：直接选文件，自动传到 COS（apk / zip / exe，5MB 内）</label>' +
+      '<input id="pPkgFile" type="file" accept=".apk,.zip,.exe,.msi,.ipa,.gz,.7z,.rar" style="padding:9px 12px">' +
+      '<div id="pPkgBox"></div></div>' +
+      '<div class="row"><div class="field"><label>装包 COS 路径（上面传完自动填）</label><input id="pFile" maxlength="200" placeholder="files/xxx.apk"></div>' +
       '<div class="field"><label>下载显示的文件名</label><input id="pFileName" maxlength="120" placeholder="宝贝之家小厨房-1.0.apk"></div></div>' +
       '<div class="row"><div class="field"><label>体验版链接（网页 demo，可不填）</label><input id="pDemoUrl" maxlength="300" placeholder="https://fenyuetongqiu.github.io/cook-site/"></div>' +
       '<div class="field"><label>体验版文件（COS 路径，可不填）</label><input id="pDemo" maxlength="300" placeholder="app/demo.zip"></div></div>' +
@@ -618,15 +622,21 @@
       '<div class="field"><label>付款提示（可选）</label><input id="payNote" maxlength="60" placeholder="扫码付完把截图发微信，10 分钟内确认"></div>' +
       '<button class="btn" id="paySave" type="button">保存收款码</button>' +
       '<div class="msg" id="msg3"></div></div>' +
-      '<div class="panel"><h3>送人：免费给产品 / 终生 VIP</h3>' +
+      '<div class="panel"><h3>送人 / 开会员</h3>' +
       '<div class="field"><label>给谁（邮箱或名字）</label><input id="gWho" maxlength="60" placeholder="15279729913@163.com 或 风月同秋"></div>' +
       '<div class="field"><label>免费送哪个产品</label><select id="gProd">' + ((SITE.products || []).map(function (p) {
         return '<option value="' + esc(p.id) + '">' + esc(p.name) + '</option>'
       }).join('') || '<option value="">还没产品</option>') + '</select></div>' +
+      '<div class="row"><div class="field"><label>会员档位</label><select id="vipPlan">' +
+      '<option value="month">月会员（30 天）</option>' +
+      '<option value="year">年会员（365 天）</option>' +
+      '<option value="life">终生会员（不过期）</option>' +
+      '<option value="off">关掉会员</option></select></div>' +
+      '<div class="field"><label>加送天数（可空，填了就按这个天数算）</label>' +
+      '<input id="vipDays" type="number" min="1" max="3650" placeholder="比如 90"></div></div>' +
       '<div class="cardact"><button class="btn pri" id="gSend" type="button">免费送他</button>' +
-      '<button class="btn" id="vipOn" type="button">开终生 VIP</button>' +
-      '<button class="btn ghost" id="vipOff" type="button">关掉 VIP</button></div>' +
-      '<p class="muted">终生 VIP = 站里所有产品不花钱直接能下。</p>' +
+      '<button class="btn" id="vipDo" type="button">设置会员</button></div>' +
+      '<p class="muted">会员 = 全站产品不花钱直接能下，小厨房家庭模式也能用；到期自动失效，续费是往后加。</p>' +
       '<div class="msg" id="msg4"></div></div>' +
       '<div class="panel"><h3>发公告</h3>' +
       '<div class="field"><label>内容（最近 3 条显示在产品页顶部）</label><textarea id="nText" maxlength="200" placeholder="新品上线，本月 8 折"></textarea></div>' +
@@ -649,6 +659,9 @@
       }).join('') : '<p class="muted">还没发公告。</p>') +
       '</div>' +
       '<div class="panel" style="margin-top:16px"><h3>订单</h3>' +
+      '<div class="field" style="max-width:300px"><label>确认收款时顺手开会员</label><select id="paidVip">' +
+      '<option value="">不开</option><option value="month">月会员 30 天</option>' +
+      '<option value="year">年会员 1 年</option><option value="life">终生会员</option></select></div>' +
       (os.length ? '<table><thead><tr><th>谁</th><th>产品</th><th>金额</th><th>状态</th><th>时间</th><th></th></tr></thead><tbody>' +
         os.map(function (o) {
           var pill = o.status === 'paid' ? '<span class="pill ok">已付款</span>'
@@ -800,17 +813,26 @@
       }).catch(function () { gSend.disabled = false; say('连不上服务器', true, $('msg4')) })
     }
 
-    var vipOn = $('vipOn'), vipOff = $('vipOff')
-    function setVip(on) {
+    var vipDo = $('vipDo')
+    if (vipDo) vipDo.onclick = function () {
       var who2 = ($('gWho') || {}).value || ''
       if (!who2.trim()) return say('写个邮箱或名字', true, $('msg4'))
-      call('admin/vip', { email: who2.trim(), name: who2.trim(), on: on }, 'POST').then(function (r) {
+      var plan = ($('vipPlan') || {}).value || 'month'
+      var days = Number((($('vipDays') || {}).value || '').trim()) || 0
+      var body = { email: who2.trim(), name: who2.trim() }
+      if (plan === 'off') body.off = true
+      else if (days > 0) { body.plan = plan === 'life' ? 'life' : plan; body.days = days }
+      else body.plan = plan
+      vipDo.disabled = true
+      call('admin/vip', body, 'POST').then(function (r) {
+        vipDo.disabled = false
         if (!r.d.ok) return say(r.d.error || '改不了', true, $('msg4'))
-        say(on ? '开好了：终生 VIP' : 'VIP 关掉了', false, $('msg4'))
-      }).catch(function () { say('连不上服务器', true, $('msg4')) })
+        var v = r.d.vip || {}
+        say('改好了：' + (v.text || '') + (v.on ? (v.days > 0 ? '（剩 ' + v.days + ' 天）' : '（不过期）') : ''), false, $('msg4'))
+        if (v.on && v.days > 0 && v.until) say('改好了：' + v.text + '，到 ' + when(v.until) + '（剩 ' + v.days + ' 天）', false, $('msg4'))
+        loadOverview().then(function () { })
+      }).catch(function () { vipDo.disabled = false; say('连不上服务器', true, $('msg4')) })
     }
-    if (vipOn) vipOn.onclick = function () { setVip(true) }
-    if (vipOff) vipOff.onclick = function () { setVip(false) }
 
     Array.prototype.forEach.call(document.querySelectorAll('[data-paid]'), function (b) {
       b.onclick = function () { setOrder(b.getAttribute('data-paid'), 'paid') }
@@ -920,6 +942,25 @@
       var box = $('pImgBox'); if (box) box.innerHTML = ''
     }
 
+    var fPkg = $('pPkgFile')
+    if (fPkg) fPkg.onchange = function () {
+      var f = fPkg.files && fPkg.files[0]
+      var box = $('pPkgBox')
+      if (!f) return
+      if (f.size > 5 * 1024 * 1024) { if (box) box.innerHTML = ''; return say('文件超过 5MB 了', true) }
+      if (box) box.innerHTML = '<p class="muted">上传中… ' + Math.round(f.size / 1024) + ' KB</p>'
+      var rd = new FileReader()
+      rd.onload = function () {
+        call('admin/upload', { data: rd.result, name: f.name }, 'POST').then(function (r) {
+          if (!r.d.ok) { if (box) box.innerHTML = ''; return say(r.d.error || '传不上去', true) }
+          var pf = $('pFile'); if (pf) pf.value = r.d.key
+          var pn = $('pFileName'); if (pn) pn.value = f.name
+          if (box) box.innerHTML = '<p class="muted">已传好：' + esc(f.name) + '（' + Math.round((r.d.size || f.size) / 1024) + ' KB）· 记得点「保存」</p>'
+        }).catch(function () { if (box) box.innerHTML = ''; say('连不上服务器', true) })
+      }
+      rd.readAsDataURL(f)
+    }
+
     var sv = $('pSave')
     if (sv) sv.onclick = function () {
       var body = {
@@ -978,8 +1019,14 @@
   }
 
   function setOrder(id, status) {
-    call('admin/order/set', { id: id, status: status }, 'POST').then(function (r) {
+    var body = { id: id, status: status }
+    if (status === 'paid') {
+      var pv = ($('paidVip') || {}).value || ''
+      if (pv) body.vipPlan = pv
+    }
+    call('admin/order/set', body, 'POST').then(function (r) {
       if (!r.d.ok) return alert(r.d.error || '改不了')
+      if (r.d.vip) alert('收款确认了，会员也开好了：' + (r.d.vip.text || '') + (r.d.vip.days > 0 ? '（剩 ' + r.d.vip.days + ' 天）' : ''))
       Promise.all([loadAdmin(), loadMine()]).then(render)
     }).catch(function () { alert('连不上服务器') })
   }
