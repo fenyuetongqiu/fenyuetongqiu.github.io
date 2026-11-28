@@ -210,6 +210,15 @@
   .vsrow .vip{text-align:center;color:#23D6FF;font-weight:700;background:rgba(35,214,255,.07)}
   .pts{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
   .ptsnum{font-size:34px;font-weight:800;color:#23D6FF;letter-spacing:.5px}
+  .vipbar{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:18px 0 6px;padding:14px 18px;border-radius:14px;border:1px solid rgba(35,214,255,.35);background:linear-gradient(120deg,rgba(35,214,255,.12),rgba(74,123,255,.04))}
+  .vipbar b{color:#23d6ff}
+  .vipbar span{color:var(--ink2);font-size:14px}
+  .toolrow{display:grid;grid-template-columns:1.6fr .7fr .7fr .7fr;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+  .toolrow input{width:100%;background:#0d1622;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font:inherit}
+  .toolrow.head{color:var(--ink2);font-size:12px;border-top:0}
+  .sw{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 12px}
+  .sw label{display:flex;align-items:center;gap:7px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;font-size:13px;color:var(--ink2);cursor:pointer}
+  .sw input{accent-color:#23d6ff}
   .payprev{margin:0 0 12px}
   .payprev img{max-width:220px;border-radius:12px;border:1px solid rgba(120,160,220,.25)}
 </style>
@@ -378,14 +387,16 @@
       '<p class="sub">' + esc(TEXTS.heroSub || '风月の工作室。你说要个什么，从想法、写代码、上线到打包成 exe / apk，全在这一间屋子里做完；做完你天天用，不合手就接着改。不接「高大上」，只做能用的东西。') + '</p>' +
       '<div class="cta"><a class="btn pri" href="#/products">看看产品 →</a>' +
       '<a class="btn" href="#/contact">找我们聊聊</a></div>' +
-      '<div class="stats">' +
+      '<div class="vipbar" data-sec="vipbar"><div><b>会员</b> <span>大部分工具会员直接下；开会员每月还送积分，积分能换小工具。</span></div>' +
+      '<a class="btn sm pri" href="#/vip">看看会员 →</a></div>' +
+      '<div class="stats" data-sec="stats">' +
       '<div class="stat"><b>3</b><span>交付形式：网页 / exe / apk</span></div>' +
       '<div class="stat"><b>1</b><span>一套账号，手机电脑共用</span></div>' +
       '<div class="stat"><b>随时</b><span>用着别扭就改，不另收费</span></div>' +
       '<div class="stat"><b>0</b><span>外包，全在这间屋子里做</span></div>' +
       '</div>' +
 
-      '<section class="fade"><div class="head"><div><div class="kicker">WHAT WE DO</div><h2>我们能干什么</h2></div>' +
+      '<section class="fade" data-sec="cards"><div class="head"><div><div class="kicker">WHAT WE DO</div><h2>我们能干什么</h2></div>' +
       '<p>一句话说清：你想要什么，我们从头做给你</p></div>' +
       '<div class="cards">' +
       '<article class="card"><h3>做家里 / 小店的工具</h3><p>点菜、记账、排班、对账、库存、会员卡——天天要用、手机上就能开的那种；两个人同时用也不会打架。</p>' +
@@ -499,9 +510,9 @@
     ;(cfg.perks || []).forEach(function (t) {
       if (t) rows.push({ k: String(t), f: '—', v: '✓' })
     })
-    if (byVip.length) rows.push({ k: '会员直接下这 ' + byVip.length + ' 个工具', f: '要买', v: '✓' })
+    if (byVip.length) rows.push({ k: '可直接下载 ' + byVip.length + ' 个工具', f: '要买', v: '✓' })
     if (buyOnly.length) rows.push({ k: '单独卖的 ' + buyOnly.length + ' 个工具', f: '要买', v: '也要买' })
-    return '<div class="vs"><div class="vsrow head"><div>能干什么（按现在的设置自动算）</div><div class="yes">免费</div><div class="vip">会员</div></div>' +
+    return '<div class="vs"><div class="vsrow head"><div>会员与免费对比（按当前设置自动生成）</div><div class="yes">免费</div><div class="vip">会员</div></div>' +
       rows.map(function (r) {
         var cls = r.v === '✓' ? 'vip' : 'vip'
         return '<div class="vsrow"><div class="f">' + esc(r.k) + '</div>' +
@@ -512,7 +523,7 @@
 
   function pageVip() {
     return '<section class="fade" style="padding-top:44px">' +
-      '<p class="muted" style="margin:0 0 10px">大部分工具会员直接下；标了「必须单独买」的除外。下面这张表按现在的设置自动算，改了权益它自己会变。</p>' +
+      '<p class="muted" style="margin:0 0 10px">会员可下载大部分工具，标注「单独购买」的工具除外。下表按当前设置自动生成，修改权益后会自动更新。</p>' +
       vipBlock() + vsBlock() +
       '<div class="panel" style="margin-top:16px"><h3>怎么算</h3>' +
       '<div class="kv"><span>生效方式</span><b>确认收款后自动开，到期自动失效</b></div>' +
@@ -529,6 +540,16 @@
     return order.map(function (c) { return { cat: c, n: m[c] } })
   }
   var CAT = ''
+
+  function applyLayout() {
+    var L = SITE.layout || {}
+    ;['stats', 'cards', 'vipbar'].forEach(function (k) {
+      if (L[k] === false) {
+        var el = document.querySelector('[data-sec="' + k + '"]')
+        if (el && el.parentNode) el.parentNode.removeChild(el)
+      }
+    })
+  }
 
   function pageProducts() {
     var allList = SITE.products || []
@@ -791,6 +812,7 @@
       '<div class="row"><div class="field"><label>分类（产品页按它分组）</label><select id="pCat">' +
       ['工具', '游戏', '插件', '模板', '其他'].map(function (c) { return '<option value="' + c + '">' + c + '</option>' }).join('') +
       '</select></div><div class="field"><label>积分价（0 = 不参与积分兑换）</label><input id="pPoints" type="number" min="0" value="0"></div>' +
+      '<div class="row"><div class="field"><label>排序（小的排前面）</label><input id="pSort" type="number" min="0" value="0"></div>' +
       '<div class="field"><label>会员能不能直接下</label><select id="pVipFree">' +
       '<option value="1">能，会员直接下</option><option value="0">不能，必须单独买</option></select></div></div>' +
       '<div class="field"><label>简介</label><textarea id="pDesc" maxlength="300" placeholder="它能干啥、给谁用、怎么交付"></textarea></div>' +
@@ -842,6 +864,9 @@
         return '<label style="display:inline-block;margin-right:16px"><input type="checkbox" id="vSaleKey' + i + '" data-key="' + k + '"' + ((vcfg.sale.keys || []).indexOf(k) >= 0 ? ' checked' : '') + '> ' + nm + '</label>'
       }).join('') + '</div>' +
       '<div class="field"><label>别人怎么充（说明文字）</label><textarea id="vHowto" rows="3">' + esc(vcfg.howto) + '</textarea></div>' +
+      '<div class="row"><div class="field"><label>开月会员送积分</label><input id="vGiftMonth" type="number" min="0" value="' + ((SITE.vip && SITE.vip.gift && SITE.vip.gift.month != null) ? SITE.vip.gift.month : 100) + '"></div>' +
+      '<div class="field"><label>开年会员送积分</label><input id="vGiftYear" type="number" min="0" value="' + ((SITE.vip && SITE.vip.gift && SITE.vip.gift.year != null) ? SITE.vip.gift.year : 300) + '"></div>' +
+      '<div class="field"><label>开终生会员送积分</label><input id="vGiftLife" type="number" min="0" value="' + ((SITE.vip && SITE.vip.gift && SITE.vip.gift.life != null) ? SITE.vip.gift.life : 1000) + '"></div></div>' +
       '<button class="btn" id="vSave" type="button">保存会员设置</button>' +
       '<div class="msg" id="msg4"></div></div>' +
       '<div class="panel"><h3>站点文案</h3>' +
@@ -870,6 +895,23 @@
       '<button class="btn" id="vipDo" type="button">设置会员</button></div>' +
       '<p class="muted">会员 = 全站产品不花钱直接能下，小厨房家庭模式也能用；到期自动失效，续费是往后加。</p>' +
       '<div class="msg" id="msg4"></div></div>' +
+      '<div class="panel"><h3>工具价格 / 积分 / 排序</h3>' +
+      '<p class="muted">直接改数字再点保存，全部生效。积分 0 = 不参与积分兑换；排序小的排前面。</p>' +
+      '<div id="toolRows"><div class="toolrow head"><span>工具</span><span>价格(元)</span><span>积分</span><span>排序</span></div>' +
+      (SITE.products || []).slice().sort(function (a, b) { return (Number(a.sort) || 0) - (Number(b.sort) || 0) }).map(function (t) {
+        return '<div class="toolrow" data-id="' + esc(t.id) + '"><span>' + esc(t.name) + '</span>' +
+          '<input data-k="price" type="number" min="0" value="' + (Number(t.price) || 0) + '">' +
+          '<input data-k="points" type="number" min="0" value="' + (Number(t.points) || 0) + '">' +
+          '<input data-k="sort" type="number" min="0" value="' + (Number(t.sort) || 0) + '"></div>'
+      }).join('') + '</div>' +
+      '<div class="cardact" style="margin-top:10px"><button class="btn pri" id="toolSave" type="button">保存全部</button><div class="msg" id="msg6"></div></div></div>' +
+      '<div class="panel"><h3>首页排版</h3>' +
+      '<p class="muted">不想显示哪块就关掉，保存后首页立刻变。</p>' +
+      '<div class="sw">' +
+      '<label><input type="checkbox" id="lStats"' + ((SITE.layout || {}).stats === false ? '' : ' checked') + '>数据条</label>' +
+      '<label><input type="checkbox" id="lCards"' + ((SITE.layout || {}).cards === false ? '' : ' checked') + '>能力卡片</label>' +
+      '<label><input type="checkbox" id="lVip"' + ((SITE.layout || {}).vipbar === false ? '' : ' checked') + '>会员入口条</label>' +
+      '</div><button class="btn" id="lSave" type="button">保存排版</button><div class="msg" id="msg7"></div></div>' +
       '<div class="panel"><h3>发公告</h3>' +
       '<div class="field"><label>内容（最近 3 条显示在产品页顶部）</label><textarea id="nText" maxlength="200" placeholder="新品上线，本月 8 折"></textarea></div>' +
       '<button class="btn" id="nSend" type="button">发出去</button>' +
@@ -935,6 +977,7 @@
     else if (cur === 'admin') html = pageAdmin()
     else html = '<section class="fade" style="padding-top:44px"><div class="empty">这页不存在。<a href="#/" style="color:var(--c1)">回首页</a></div></section>'
     $('app').innerHTML = html
+    applyLayout()
     var ft = $('ft')
     if (ft) ft.textContent = TEXTS.foot || '© 2026 风月科技 · fenyuetongqiu.top'
     renderNav(cur)
@@ -1027,7 +1070,7 @@
         if (!p) return
         go('admin')
         setTimeout(function () {
-          ;[['pId', p.id], ['pCat', p.cat || '工具'], ['pPoints', p.points || 0], ['pVipFree', p.vipFree === false ? '0' : '1'],
+          ;[['pId', p.id], ['pCat', p.cat || '工具'], ['pPoints', p.points || 0], ['pVipFree', p.vipFree === false ? '0' : '1'], ['pSort', p.sort || 0],
         ['pName', p.name], ['pPrice', p.price], ['pVer', p.ver], ['pTag', p.tag],
             ['pDesc', p.desc], ['pFile', p.file], ['pFileName', p.fileName], ['pDemoUrl', p.demoUrl], ['pDemo', p.demo]].forEach(function (kv) {
             var e = $(kv[0]); if (e) e.value = kv[1] == null ? '' : kv[1]
@@ -1295,6 +1338,11 @@
           percent: Number(g('vSalePct', 0)) || 0,
           until: g('vSaleUntil', ''),
           keys: saleKeys
+        },
+        gift: {
+          month: Number(g('vGiftMonth', 100)) || 0,
+          year: Number(g('vGiftYear', 300)) || 0,
+          life: Number(g('vGiftLife', 1000)) || 0
         }
       }, 'POST').then(function (r) {
         vSave.disabled = false
@@ -1304,6 +1352,43 @@
         var box = $('msg4')
         if (box) box.textContent = '存好了，产品页已经更新。'
       }).catch(function () { vSave.disabled = false; alert('连不上服务器') })
+    }
+
+    function productPayload(p, ov) {
+      var o = {}
+      ;['name', 'desc', 'price', 'tag', 'cat', 'points', 'sort', 'file', 'fileName', 'ver', 'demoUrl', 'demoLink', 'demo', 'demoName', 'img', 'vipFree', 'on'].forEach(function (k) { if (p[k] !== undefined) o[k] = p[k] })
+      o.id = p.id
+      for (var k in ov) o[k] = ov[k]
+      return o
+    }
+    var tsv = $('toolSave')
+    if (tsv) tsv.onclick = function () {
+      var rows = document.querySelectorAll('#toolRows .toolrow[data-id]')
+      var list = SITE.products || []
+      tsv.disabled = true
+      var jobs = []
+      Array.prototype.forEach.call(rows, function (row) {
+        var id = row.getAttribute('data-id')
+        var p2 = list.filter(function (x) { return x.id === id })[0]
+        if (!p2) return
+        var q = function (k) { var e = row.querySelector('[data-k="' + k + '"]'); return e ? Number(e.value || 0) || 0 : 0 }
+        jobs.push(call('admin/product', productPayload(p2, { price: q('price'), points: q('points'), sort: q('sort') })))
+      })
+      Promise.all(jobs).then(function () {
+        tsv.disabled = false
+        var m = $('msg6'); if (m) m.textContent = '存好了，' + jobs.length + ' 个工具都更新了。'
+        loadSite().then(render)
+      }).catch(function () { tsv.disabled = false; alert('没存上，再点一次') })
+    }
+    var lsv = $('lSave')
+    if (lsv) lsv.onclick = function () {
+      lsv.disabled = true
+      call('admin/layout', { stats: !!($('lStats') || {}).checked, cards: !!($('lCards') || {}).checked, vipbar: !!($('lVip') || {}).checked }, 'POST').then(function (r) {
+        lsv.disabled = false
+        if (!r.d || !r.d.ok) return alert((r.d && r.d.error) || '存不上')
+        var m = $('msg7'); if (m) m.textContent = '排好了，首页已经变。'
+        loadSite().then(render)
+      }).catch(function () { lsv.disabled = false; alert('连不上服务器') })
     }
 
     var tSave = $('tSave')
@@ -1331,6 +1416,7 @@
       cat: ($('pCat') || {}).value || '',
       points: Number(($('pPoints') || {}).value || 0) || 0,
       vipFree: (($('pVipFree') || {}).value || '1') === '1',
+      sort: Number(($('pSort') || {}).value || 0) || 0,
         desc: ($('pDesc') || {}).value || '',
         file: ($('pFile') || {}).value || '',
         fileName: ($('pFileName') || {}).value || '',
@@ -1396,7 +1482,7 @@
   /* ---------- 数据 ---------- */
   function loadSite() {
     return call('site').then(function (r) {
-      if (r.d && r.d.ok) SITE = { products: r.d.products || [], notices: r.d.notices || [], allNotices: r.d.allNotices || r.d.notices || [], payUrl: r.d.payUrl || '', payNote: r.d.payNote || '', vip: r.d.vip || null, text: r.d.text || {} }; applyText()
+      if (r.d && r.d.ok) SITE = { products: r.d.products || [], notices: r.d.notices || [], allNotices: r.d.allNotices || r.d.notices || [], payUrl: r.d.payUrl || '', payNote: r.d.payNote || '', vip: r.d.vip || null, text: r.d.text || {}, layout: r.d.layout || {} }; applyText()
     }).catch(function () {})
   }
   function loadMine() {
