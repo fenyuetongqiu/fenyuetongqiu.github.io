@@ -118,6 +118,9 @@
   textarea{min-height:92px;resize:vertical}
   .row{display:flex;gap:12px;flex-wrap:wrap}
   .row>*{flex:1;min-width:160px}
+  ul.perks{list-style:none;padding:0;margin:8px 0}
+  ul.perks li{position:relative;padding:7px 0 7px 24px;color:#cfd8e6;font-size:14px;line-height:1.6}
+  ul.perks li:before{content:'✓';position:absolute;left:2px;top:6px;color:var(--c1);font-weight:700}
   .msg{min-height:20px;font-size:13.5px;color:var(--c1)}
   .msg.err{color:#ffb4b4}
 
@@ -381,30 +384,58 @@
       '</div></section>'
   }
 
-  var VIP_PLANS = [
-    { id: 'vip-month', name: '月会员', price: 6, unit: '/ 月', note: '30 天，先试一个月' },
-    { id: 'vip-year', name: '年会员', price: 48, unit: '/ 年', note: '365 天，等于打了 8 折' },
-    { id: 'vip-life', name: '终生会员', price: 168, unit: '一次性', note: '买到就不过期，以后新功能也能用' }
-  ]
+  var VIP_FALLBACK = {
+    headline: '会员 = 全站产品直接下，小厨房全家一起用。',
+    perks: [
+      '全站产品都能下，不用一个个买（以后新上架的也算）',
+      '小厨房「家庭模式」：一家人的点菜、做菜、菜谱都在一块',
+      '产品出新版直接下新版，不加钱',
+      '有问题直接微信/QQ 找我，优先回'
+    ],
+    howto: '点「开通」→ 扫码付款 → 回来点「我付好了」→ 我这边确认（一般当天）→ 会员自动生效。',
+    plans: [
+      { key: 'month', name: '月会员', price: 6, days: 30, note: '先试一个月' },
+      { key: 'year', name: '年会员', price: 48, days: 365, note: '等于打了 8 折，最划算' },
+      { key: 'life', name: '终生会员', price: 168, days: 0, note: '一次买断，不过期' }
+    ]
+  }
+
+  function vipCfgView() {
+    var v = SITE && SITE.vip
+    if (!v || !v.plans || !v.plans.length) return VIP_FALLBACK
+    return {
+      headline: v.headline || VIP_FALLBACK.headline,
+      perks: (v.perks && v.perks.length) ? v.perks : VIP_FALLBACK.perks,
+      howto: v.howto || VIP_FALLBACK.howto,
+      plans: v.plans
+    }
+  }
 
   function vipBlock() {
+    var cfg = vipCfgView()
     var me = ME || {}
     var on = !!me.vip
-    var st = on
-      ? ('你现在是 ' + esc(me.vipText || '会员') + (me.vipDays > 0 ? '，还剩 ' + me.vipDays + ' 天（到 ' + when(me.vipUntil) + '）' : '，不过期'))
-      : (ME ? '还不是会员' : '登录后能买，也能看自己的会员状态')
-    var h = '<div class="panel" style="margin-top:18px">' +
-      '<div class="head" style="margin:0 0 10px"><div><div class="kicker">MEMBER</div><h2 style="font-size:22px">会员</h2></div><p>' + st + '</p></div>' +
-      '<div class="cards">' + VIP_PLANS.map(function (v) {
-        var mine = MYORDERS.some(function (o) { return o.productId === v.id && o.status === 'wait' })
-        return '<article class="card"><h3>' + v.name + '</h3>' +
-          '<div class="price">' + money(v.price) + '<span class="muted" style="font-size:13px;font-weight:400"> ' + v.unit + '</span></div>' +
-          '<p>' + v.note + '</p>' +
+    var mineLine = on
+      ? '<span class="pill ok">你现在是 ' + esc(me.vipText || '会员') + (me.vipDays > 0 ? ' · 还剩 ' + me.vipDays + ' 天' : ' · 不过期') + '</span>'
+      : (ME ? '<span class="pill wait">还不是会员</span>' : '<span class="muted">登录后能开通，也能看自己的会员状态</span>')
+    var h = '<div class="panel" id="member" style="margin-top:18px">' +
+      '<div class="head" style="margin:0 0 12px"><div><div class="kicker">MEMBER</div><h2 style="font-size:22px">会员</h2></div><p>' + esc(cfg.headline) + '</p></div>' +
+      '<div class="two"><div><h3>会员能干什么</h3><ul class="perks">' +
+      cfg.perks.map(function (x) { return '<li>' + esc(x) + '</li>' }).join('') + '</ul></div>' +
+      '<div><h3>别人怎么充</h3><p class="muted">' + esc(cfg.howto) + '</p>' +
+      '<div class="kv"><span>付款方式</span><b>微信扫码（照片发我也行）</b></div>' +
+      '<div class="kv"><span>多久到</span><b>我看到就开，一般当天</b></div>' +
+      '<p style="margin-top:10px">' + mineLine + '</p></div></div>' +
+      '<div class="cards" style="margin-top:14px">' + cfg.plans.map(function (v) {
+        var waiting = MYORDERS.some(function (o) { return o.productId === 'vip-' + v.key && o.status === 'wait' })
+        return '<article class="card" id="vip-' + esc(v.key) + '"><h3>' + esc(v.name) + '</h3>' +
+          '<div class="price">' + money(v.price) + '<span class="muted" style="font-size:13px;font-weight:400"> ' + (v.days > 0 ? '/ ' + v.days + ' 天' : '一次性') + '</span></div>' +
+          (v.note ? '<p>' + esc(v.note) + '</p>' : '') +
           '<div class="cardact">' +
-          (mine ? '<span class="pill wait">已下单，等确认</span>' : '<button class="btn pri sm" data-buy="' + v.id + '">' + (on ? '续费' : '开通') + '</button>') +
+          (waiting ? '<span class="pill wait">已下单，等我确认</span>' : '<button class="btn pri sm" data-buy="vip-' + esc(v.key) + '">' + (on ? '续费' : '开通') + '</button>') +
           '</div></article>'
       }).join('') + '</div>' +
-      '<p class="muted" style="margin-top:12px">会员 = 全部产品不花钱直接下 + 小厨房家庭模式。到期自动失效，续费是在原来的到期日往后加。</p></div>'
+      '<p class="muted" style="margin-top:12px">到期自动失效，不需要了也不用去取消；续费是在原来的到期日往后加。</p></div>'
     return h
   }
 
@@ -610,6 +641,7 @@
     if (!ME || ME.role !== 'admin') return '<section class="fade" style="padding-top:44px"><div class="empty">这页只有管理员能进。</div></section>'
     var os = ADM.orders || []
     var ov = ADM.overview || null
+    var vcfg = vipCfgView()
     var bars = ''
     if (ov && ov.days) {
       var mx = 1
@@ -660,6 +692,22 @@
       '<div class="field"><label>付款提示（可选）</label><input id="payNote" maxlength="60" placeholder="扫码付完把截图发微信，10 分钟内确认"></div>' +
       '<button class="btn" id="paySave" type="button">保存收款码</button>' +
       '<div class="msg" id="msg3"></div></div>' +
+      '<div class="panel"><h3>会员设置</h3>' +
+      '<p class="muted" style="margin:0 0 12px">这里改的会立刻显示在「产品」页的会员区，别人看到的就是这个。</p>' +
+      '<div class="field"><label>一句话介绍</label><input id="vHead" maxlength="200" value="' + esc(vcfg.headline) + '"></div>' +
+      '<div class="field"><label>会员能干什么（一行一条，最多 12 条）</label><textarea id="vPerks" rows="6">' + esc(vcfg.perks.join('\n')) + '</textarea></div>' +
+      '<div class="muted" style="margin:6px 0">三档价格（天数填 0 = 终生不过期）</div>' +
+      vcfg.plans.map(function (p2, i) {
+        return '<div class="row" style="margin-bottom:8px">' +
+          '<div class="field"><label>档位名</label><input id="vName' + i + '" maxlength="20" value="' + esc(p2.name) + '"></div>' +
+          '<div class="field"><label>价格（元）</label><input id="vPrice' + i + '" type="number" min="0" value="' + p2.price + '"></div>' +
+          '<div class="field"><label>天数</label><input id="vDays' + i + '" type="number" min="0" value="' + p2.days + '"></div>' +
+          '<div class="field"><label>备注</label><input id="vNote' + i + '" maxlength="60" value="' + esc(p2.note) + '"></div>' +
+          '</div>'
+      }).join('') +
+      '<div class="field"><label>别人怎么充（说明文字）</label><textarea id="vHowto" rows="3">' + esc(vcfg.howto) + '</textarea></div>' +
+      '<button class="btn" id="vSave" type="button">保存会员设置</button>' +
+      '<div class="msg" id="msg4"></div></div>' +
       '<div class="panel"><h3>送人 / 开会员</h3>' +
       '<div class="field"><label>给谁（邮箱或名字）</label><input id="gWho" maxlength="60" placeholder="15279729913@163.com 或 风月同秋"></div>' +
       '<div class="field"><label>免费送哪个产品</label><select id="gProd">' + ((SITE.products || []).map(function (p) {
@@ -756,7 +804,7 @@
 
     Array.prototype.forEach.call(document.querySelectorAll('[data-dl]'), function (b) {
       b.onclick = function () {
-        if (!ME) { go('login'); return }
+        if (!ME) { try { sessionStorage.setItem('fy-back', location.hash) } catch (e) {} go('login'); return }
         var old = b.textContent
         b.disabled = true; b.textContent = '准备中…'
         call('download?id=' + encodeURIComponent(b.getAttribute('data-dl'))).then(function (r) {
@@ -769,7 +817,7 @@
 
     Array.prototype.forEach.call(document.querySelectorAll('[data-buy]'), function (b) {
       b.onclick = function () {
-        if (!ME) { go('login'); return }
+        if (!ME) { try { sessionStorage.setItem('fy-back', location.hash) } catch (e) {} go('login'); return }
         var old = b.textContent
         b.disabled = true; b.textContent = '下单中…'
         call('order/create', { productId: b.getAttribute('data-buy') }).then(function (r) {
@@ -891,7 +939,11 @@
         login.disabled = false; login.textContent = '登录'
         if (!r.d.ok) return say(r.d.error || '登不进去', true)
         setTok(r.d.token); ME = r.d.user
-        Promise.all([loadMine(), loadSite(), loadAdmin()]).then(function () { go('me') })
+        var back = ''
+        try { back = sessionStorage.getItem('fy-back') || ''; sessionStorage.removeItem('fy-back') } catch (e) {}
+        Promise.all([loadMine(), loadSite(), loadAdmin()]).then(function () {
+          go(back ? back.replace(/^#\/?/, '') : 'me')
+        })
       }).catch(function () { login.disabled = false; login.textContent = '登录'; say('连不上服务器', true) })
     }
 
@@ -910,7 +962,11 @@
         reg.disabled = false; reg.textContent = '注册并登录'
         if (!r.d.ok) return say(r.d.error || '注册失败', true)
         setTok(r.d.token); ME = r.d.user
-        Promise.all([loadMine(), loadSite(), loadAdmin()]).then(function () { go('me') })
+        var back = ''
+        try { back = sessionStorage.getItem('fy-back') || ''; sessionStorage.removeItem('fy-back') } catch (e) {}
+        Promise.all([loadMine(), loadSite(), loadAdmin()]).then(function () {
+          go(back ? back.replace(/^#\/?/, '') : 'me')
+        })
       }).catch(function () { reg.disabled = false; reg.textContent = '注册并登录'; say('连不上服务器', true) })
     }
 
@@ -1013,6 +1069,35 @@
         }).catch(function () { b.disabled = false; alert('连不上服务器') })
       }
     })
+
+    var vSave = $('vSave')
+    if (vSave) vSave.onclick = function () {
+      var g = function (id, def) { var e = $(id); return e ? e.value : def }
+      var plans = vcfg.plans.map(function (p2, i) {
+        return {
+          key: p2.key,
+          name: g('vName' + i, p2.name),
+          price: Number(g('vPrice' + i, p2.price)) || 0,
+          days: Number(g('vDays' + i, p2.days)) || 0,
+          note: g('vNote' + i, p2.note)
+        }
+      })
+      var perks = String(g('vPerks', '')).split('\n').map(function (x) { return x.trim() }).filter(Boolean)
+      vSave.disabled = true
+      call('admin/vipcfg', {
+        headline: g('vHead', vcfg.headline),
+        perks: perks,
+        howto: g('vHowto', vcfg.howto),
+        plans: plans
+      }, 'POST').then(function (r) {
+        vSave.disabled = false
+        if (!r.d || !r.d.ok) return alert((r.d && r.d.error) || '存不上')
+        SITE.vip = r.d.vip
+        render()
+        var box = $('msg4')
+        if (box) box.textContent = '存好了，产品页已经更新。'
+      }).catch(function () { vSave.disabled = false; alert('连不上服务器') })
+    }
 
     var sv = $('pSave')
     if (sv) sv.onclick = function () {
