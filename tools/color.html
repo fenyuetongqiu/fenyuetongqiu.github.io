@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>颜色工具 · 风月小工具</title>
+<style>
+  :root{--bg:#0a1018;--panel:#111a26;--line:#22303f;--ink:#e8f1fa;--ink2:#93a6ba;--c1:#23d6ff}
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#12263c,#0a1018 60%);color:var(--ink);font:15px/1.6 "Microsoft YaHei",system-ui,sans-serif}
+  .wrap{max-width:900px;margin:0 auto;padding:34px 18px 70px}
+  h1{font-size:26px;margin:0 0 6px}
+  .sub{color:var(--ink2);margin:0 0 22px;font-size:14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px}
+  .top{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+  .swatch{width:120px;height:120px;border-radius:18px;border:1px solid var(--line)}
+  input[type=color]{width:64px;height:44px;border:0;background:transparent;cursor:pointer}
+  input[type=text]{background:#0d1622;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;font-family:Consolas,monospace;width:150px}
+  .kv{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line);font-family:Consolas,monospace;cursor:pointer}
+  .kv b{color:#23d6ff}
+  .muted{color:var(--ink2);font-size:13px;font-family:inherit}
+  h3{font-size:14px;color:var(--ink2);margin:18px 0 10px;font-weight:400}
+  .row{display:flex;flex-wrap:wrap;gap:10px}
+  .chip{width:76px;height:60px;border-radius:12px;border:1px solid var(--line);display:flex;align-items:flex-end;justify-content:center;font-size:11px;font-family:Consolas,monospace;padding-bottom:4px;cursor:pointer}
+  .foot{margin-top:26px;color:#5b6b82;font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>颜色工具</h1>
+  <p class="sub">取色 / HEX·RGB·HSL 互转 / 自动配色 / 黑白对比度；点一行就复制。</p>
+  <div class="panel">
+    <div class="top">
+      <div class="swatch" id="sw"></div>
+      <div>
+        <input type="color" id="pick" value="#23d6ff">
+        <input type="text" id="hex" value="#23d6ff" maxlength="7">
+        <p class="muted">改色号或点色块都行</p>
+      </div>
+      <div id="vals" style="flex:1;min-width:220px"></div>
+    </div>
+    <h3>深浅一套（点色块复制）</h3>
+    <div class="row" id="shades"></div>
+    <h3>邻近色 / 补色</h3>
+    <div class="row" id="mates"></div>
+    <h3>黑白字对比度</h3>
+    <div class="row" id="contrast"></div>
+  </div>
+  <p class="foot">风月の工作室 · 全在本地算</p>
+</div>
+<script>
+function $(id) { return document.getElementById(id) }
+function hex2rgb(h) { h = h.replace('#', ''); if (h.length === 3) h = h.split('').map(function (c) { return c + c }).join(''); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)] }
+function rgb2hex(r, g, b) { return '#' + [r, g, b].map(function (x) { x = Math.max(0, Math.min(255, Math.round(x))); return ('0' + x.toString(16)).slice(-2) }).join('') }
+function rgb2hsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255
+  var mx = Math.max(r, g, b), mn = Math.min(r, g, b), h = 0, s = 0, l = (mx + mn) / 2
+  if (mx !== mn) {
+    var d = mx - mn
+    s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn)
+    h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4
+    h *= 60
+  }
+  return [Math.round(h), Math.round(s * 100), Math.round(l * 100)]
+}
+function hsl2rgb(h, s, l) {
+  s /= 100; l /= 100
+  var c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = l - c / 2, r = 0, g = 0, b = 0
+  if (h < 60) { r = c; g = x } else if (h < 120) { r = x; g = c } else if (h < 180) { g = c; b = x }
+  else if (h < 240) { g = x; b = c } else if (h < 300) { r = x; b = c } else { r = c; b = x }
+  return [(r + m) * 255, (g + m) * 255, (b + m) * 255]
+}
+function lum(rgb) {
+  var a = rgb.map(function (v) { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4) })
+  return .2126 * a[0] + .7152 * a[1] + .0722 * a[2]
+}
+function contrast(a, b) { var l1 = lum(a), l2 = lum(b); return ((Math.max(l1, l2) + .05) / (Math.min(l1, l2) + .05)).toFixed(2) }
+function copy(t) { navigator.clipboard.writeText(t); }
+var curHex = '#23d6ff'
+function render() {
+  var rgb = hex2rgb(curHex), hsl = rgb2hsl(rgb[0], rgb[1], rgb[2])
+  $('sw').style.background = curHex
+  $('pick').value = curHex
+  $('hex').value = curHex
+  $('vals').innerHTML =
+    '<div class="kv" data-c="' + curHex + '"><span>HEX</span><b>' + curHex.toUpperCase() + '</b></div>' +
+    '<div class="kv" data-c="rgb(' + rgb.join(',') + ')"><span>RGB</span><b>' + rgb.join(', ') + '</b></div>' +
+    '<div class="kv" data-c="hsl(' + hsl.join(',') + ')"><span>HSL</span><b>' + hsl.join(', ') + '</b></div>' +
+    '<div class="kv" data-c="' + contrast(rgb, [255, 255, 255]) + '"><span>白字对比</span><b>' + contrast(rgb, [255, 255, 255]) + ' : 1</b></div>' +
+    '<div class="kv" data-c="' + contrast(rgb, [0, 0, 0]) + '"><span>黑字对比</span><b>' + contrast(rgb, [0, 0, 0]) + ' : 1</b></div>'
+  Array.prototype.forEach.call(document.querySelectorAll('.kv'), function (k) {
+    k.onclick = function () { copy(k.getAttribute('data-c')); }
+  })
+  var sh = []
+  ;[90, 75, 60, 45, 30, 15].forEach(function (l) {
+    var c = hsl2rgb(hsl[0], hsl[1], l), h = rgb2hex(c[0], c[1], c[2])
+    sh.push('<div class="chip" style="background:' + h + ';color:' + (l > 55 ? '#111' : '#fff') + '" data-c="' + h + '">' + h + '</div>')
+  })
+  $('shades').innerHTML = sh.join('')
+  var mates = []
+  ;[-30, 30, 150, 180, 210].forEach(function (dh) {
+    var c = hsl2rgb((hsl[0] + dh + 360) % 360, hsl[1], hsl[2]), h = rgb2hex(c[0], c[1], c[2])
+    mates.push('<div class="chip" style="background:' + h + ';color:#fff" data-c="' + h + '">' + h + '</div>')
+  })
+  $('mates').innerHTML = mates.join('')
+  Array.prototype.forEach.call(document.querySelectorAll('.chip'), function (c) {
+    c.onclick = function () { curHex = c.getAttribute('data-c'); render() }
+  })
+  $('contrast').innerHTML = '<span class="muted">白字 ' + contrast(rgb, [255, 255, 255]) + ' : 1 　黑字 ' + contrast(rgb, [0, 0, 0]) + ' : 1（4.5 以上算好读）</span>'
+}
+$('pick').oninput = function () { curHex = $('pick').value; render() }
+$('hex').oninput = function () {
+  var v = $('hex').value.trim()
+  if (/^#?[0-9a-fA-F]{3}$/.test(v) || /^#?[0-9a-fA-F]{6}$/.test(v)) { curHex = '#' + v.replace('#', ''); render() }
+}
+render()
+</script>
+</body>
+</html>
