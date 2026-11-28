@@ -193,6 +193,12 @@
   .bars .bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px}
   .bars .bar i{display:block;width:100%;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,var(--c1),var(--c2));opacity:.85}
   .bars .bar span{font-size:10.5px;color:var(--mut);white-space:nowrap}
+  input[type="file"]{width:100%;padding:9px 12px;border-radius:12px;border:1px dashed rgba(120,160,220,.35);background:#0c1220;color:#9fb0c6;font-size:13px;cursor:pointer}
+  input[type="file"]:hover{border-color:var(--c1)}
+  input[type="file"]::file-selector-button{margin-right:12px;border:0;border-radius:9px;padding:8px 16px;background:linear-gradient(135deg,#23D6FF,#4A7BFF);color:#04121c;font-weight:700;font-family:inherit;cursor:pointer}
+  input[type="file"]::file-selector-button:hover{filter:brightness(1.08)}
+  .payprev{margin:0 0 12px}
+  .payprev img{max-width:220px;border-radius:12px;border:1px solid rgba(120,160,220,.25)}
 </style>
 </head>
 <body>
@@ -707,7 +713,8 @@
       '<div class="panel"><h3>收款码（微信）</h3>' +
       (SITE.payUrl ? '<div class="payprev"><img class="imgprev" src="' + esc(SITE.payUrl) + '"></div>' : '<p class="muted">还没放收款码，买家下单后只能看到联系方式。</p>') +
       '<div class="field"><label>换一张收款码</label><input id="payFile" type="file" accept="image/*" style="padding:9px 12px"></div>' +
-      '<div class="field"><label>付款提示（可选）</label><input id="payNote" maxlength="60" placeholder="扫码付完把截图发微信，10 分钟内确认"></div>' +
+      '<div class="field"><label>付款提示（可选）</label><input id="payNote" maxlength="60" value="' + esc(SITE.payNote || '') + '" placeholder="扫码付完把截图发微信，10 分钟内确认"></div>' +
+      '<div id="payPrev"></div>' +
       '<button class="btn" id="paySave" type="button">保存收款码</button>' +
       '<div class="msg" id="msg3"></div></div>' +
       '<div class="panel"><h3>会员设置</h3>' +
@@ -909,7 +916,11 @@
         call('admin/pay', { data: data || '', note: note }, 'POST').then(function (r) {
           paySave.disabled = false
           if (!r.d.ok) return say(r.d.error || '存不上', true, $('msg3'))
-          say('存好了', false, $('msg3'))
+          say('存好了，买家下单就能看到这张码了', false, $('msg3'))
+          if (r.d && r.d.payUrl) {
+            var pv = $('payPrev')
+            if (pv) pv.innerHTML = '<div class="payprev"><img class="imgprev" src="' + esc(r.d.payUrl) + '"></div>'
+          }
           loadSite().then(render)
         }).catch(function () { paySave.disabled = false; say('连不上服务器', true, $('msg3')) })
       }
@@ -1214,7 +1225,7 @@
   /* ---------- 数据 ---------- */
   function loadSite() {
     return call('site').then(function (r) {
-      if (r.d && r.d.ok) SITE = { products: r.d.products || [], notices: r.d.notices || [], allNotices: r.d.allNotices || r.d.notices || [] }
+      if (r.d && r.d.ok) SITE = { products: r.d.products || [], notices: r.d.notices || [], allNotices: r.d.allNotices || r.d.notices || [], payUrl: r.d.payUrl || '', payNote: r.d.payNote || '', vip: r.d.vip || null }
     }).catch(function () {})
   }
   function loadMine() {
