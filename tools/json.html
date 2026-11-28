@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JSON 工具 · 风月小工具</title>
+<style>
+  :root{--bg:#0a1018;--panel:#111a26;--line:#22303f;--ink:#e8f1fa;--ink2:#93a6ba;--c1:#23d6ff}
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#12263c,#0a1018 60%);color:var(--ink);font:15px/1.6 "Microsoft YaHei",system-ui,sans-serif}
+  .wrap{max-width:980px;margin:0 auto;padding:34px 18px 70px}
+  h1{font-size:26px;margin:0 0 6px}
+  .sub{color:var(--ink2);margin:0 0 22px;font-size:14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px}
+  .row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+  .btn{background:linear-gradient(135deg,#23d6ff,#4a7bff);color:#04121c;border:0;border-radius:10px;padding:9px 16px;font:inherit;font-weight:700;cursor:pointer}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+  textarea{width:100%;min-height:220px;background:#0d1622;color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:14px;font:14px/1.55 Consolas,Menlo,monospace;resize:vertical}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:760px){.split{grid-template-columns:1fr}}
+  .msg{font-size:13px;margin-top:10px;color:var(--ink2);min-height:20px}
+  .ok{color:#6ee7a8}.err{color:#ff8080}
+  .foot{margin-top:26px;color:#5b6b82;font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>JSON 工具</h1>
+  <p class="sub">格式化、压缩、校验（会告诉你错在第几行）、转义 / 去转义；都在本地。</p>
+  <div class="panel">
+    <div class="row">
+      <button class="btn" id="fmt" type="button">格式化</button>
+      <button class="btn ghost" id="min" type="button">压缩成一行</button>
+      <button class="btn ghost" id="chk" type="button">只校验</button>
+      <button class="btn ghost" id="esc" type="button">转义</button>
+      <button class="btn ghost" id="unesc" type="button">去转义</button>
+      <button class="btn ghost" id="copy" type="button">复制结果</button>
+      <button class="btn ghost" id="clr" type="button">清空</button>
+    </div>
+    <div class="split">
+      <div>
+        <div class="sub" style="margin:0 0 8px">输入</div>
+        <textarea id="in" placeholder='{"name":"大肥鱼","tools":5}'></textarea>
+      </div>
+      <div>
+        <div class="sub" style="margin:0 0 8px">结果</div>
+        <textarea id="out" readonly></textarea>
+      </div>
+    </div>
+    <div class="msg" id="msg"></div>
+  </div>
+  <p class="foot">风月の工作室 · 不联网，你的数据不出本机</p>
+</div>
+<script>
+function $(id) { return document.getElementById(id) }
+function say(t, ok) { var m = $('msg'); m.textContent = t || ''; m.className = 'msg' + (ok === true ? ' ok' : ok === false ? ' err' : '') }
+function parse() {
+  var t = $('in').value.trim()
+  if (!t) { say('先粘点东西进来', false); return null }
+  try { return { v: JSON.parse(t) } }
+  catch (e) {
+    var m = /position (\d+)/.exec(e.message)
+    var line = 1, col = 1
+    if (m) {
+      var pos = Number(m[1]), pre = t.slice(0, pos).split('\n')
+      line = pre.length; col = pre[pre.length - 1].length + 1
+    }
+    say('不是合法 JSON：第 ' + line + ' 行第 ' + col + ' 列 · ' + e.message, false)
+    return null
+  }
+}
+$('fmt').onclick = function () {
+  var r = parse(); if (!r) return
+  $('out').value = JSON.stringify(r.v, null, 2)
+  say('格式化好了', true)
+}
+$('min').onclick = function () {
+  var r = parse(); if (!r) return
+  $('out').value = JSON.stringify(r.v)
+  say('压成一行了', true)
+}
+$('chk').onclick = function () {
+  var r = parse(); if (!r) return
+  var t = JSON.stringify(r.v)
+  say('合法 JSON · 一层层摊开大概 ' + t.length + ' 个字符', true)
+}
+$('esc').onclick = function () {
+  var t = $('in').value
+  if (!t) { say('先粘点东西', false); return }
+  $('out').value = JSON.stringify(t)
+  say('转义好了（能直接塞进字符串里）', true)
+}
+$('unesc').onclick = function () {
+  var t = $('in').value.trim()
+  try {
+    var v = JSON.parse(t.charAt(0) === '"' ? t : '"' + t + '"')
+    $('out').value = typeof v === 'string' ? v : JSON.stringify(v)
+    say('去转义好了', true)
+  } catch (e) { say('转义不完整，解不开', false) }
+}
+$('copy').onclick = function () {
+  if (!$('out').value) { say('结果还是空的', false); return }
+  navigator.clipboard.writeText($('out').value).then(function () { say('复制好了', true) })
+}
+$('clr').onclick = function () { $('in').value = ''; $('out').value = ''; say('') }
+$('in').addEventListener('paste', function () { setTimeout(function () { $('chk').click() }, 10) })
+</script>
+</body>
+</html>
