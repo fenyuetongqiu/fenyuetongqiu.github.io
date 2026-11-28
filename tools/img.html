@@ -52,7 +52,7 @@
   <h1>图片压缩</h1>
   <p class="sub">本地处理，图不上传；能改尺寸、转格式，顺手把大小压下来。</p>
   <div class="panel">
-    <div class="drop" id="drop">点这里选图，或者直接把图拖进来（可多选）<br><span class="muted">jpg / png / webp / gif 都行</span></div>
+    <div class="drop" id="drop">点这里选图、直接拖进来，或者按 Ctrl+V 粘贴（可多选）<br><span class="muted">jpg / png / webp / gif 都行</span></div>
     <input id="file" type="file" accept="image/*" multiple hidden>
     <div class="row">
       <label>质量 <b id="qVal">80</b>%</label><input id="q" type="range" min="30" max="100" value="80">
@@ -61,6 +61,7 @@
       </select></label>
       <label>格式 <select id="fmt"><option value="image/jpeg">JPG</option><option value="image/webp">WEBP</option><option value="image/png">PNG</option></select></label>
       <button class="btn" id="go" type="button">压缩</button>
+      <button class="btn ghost" id="allDl" type="button">全部下载</button>
       <button class="btn ghost" id="clear" type="button">清空</button>
     </div>
   </div>
@@ -79,10 +80,23 @@ $('drop').ondrop = function (e) { e.preventDefault(); $('drop').style.borderColo
 $('file').onchange = function () { add($('file').files); $('file').value = '' }
 $('q').oninput = function () { $('qVal').textContent = $('q').value }
 $('clear').onclick = function () { files = []; outs = []; render() }
+$('allDl').onclick = function () {
+  var as = document.querySelectorAll('#list a.dl')
+  if (!as.length) return alert('先压缩一下')
+  Array.prototype.forEach.call(as, function (a, i) { setTimeout(function () { a.click() }, i * 300) })
+}
+window.addEventListener('paste', function (e) {
+  var items = (e.clipboardData || {}).items || [], fs = []
+  for (var i = 0; i < items.length; i++) if (items[i].type && items[i].type.indexOf('image') === 0) fs.push(items[i].getAsFile())
+  if (fs.length) { add(fs); e.preventDefault() }
+})
 function render() {
   var box = $('list')
   if (!files.length) { box.innerHTML = '<p class="muted">还没有图。</p>'; return }
-  box.innerHTML = files.map(function (f, i) {
+  var saved = 0, orig = 0
+  files.forEach(function (f, i) { if (outs[i] && outs[i].size) { orig += f.size; saved += Math.max(0, f.size - outs[i].size) } })
+  var sum = saved ? '<p class="muted" style="margin:0 0 10px">合计省下 <span class="ok">' + fmtSize(saved) + '</span>' + (orig ? '（' + Math.round(saved / orig * 100) + '%）' : '') + '</p>' : ''
+  box.innerHTML = sum + files.map(function (f, i) {
     var o = outs[i]
     return '<div class="item">' +
       (o ? '<img src="' + o.url + '">' : '<img src="">') +
