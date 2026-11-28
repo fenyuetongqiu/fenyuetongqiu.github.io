@@ -197,6 +197,19 @@
   input[type="file"]:hover{border-color:var(--c1)}
   input[type="file"]::file-selector-button{margin-right:12px;border:0;border-radius:9px;padding:8px 16px;background:linear-gradient(135deg,#23D6FF,#4A7BFF);color:#04121c;font-weight:700;font-family:inherit;cursor:pointer}
   input[type="file"]::file-selector-button:hover{filter:brightness(1.08)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 18px}
+  .chip{padding:7px 15px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--ink2);font-size:13px;cursor:pointer;font-family:inherit;transition:.15s}
+  .chip:hover{border-color:var(--c1);color:var(--ink)}
+  .chip.on{border-color:var(--c1);color:#04121c;background:linear-gradient(135deg,#23D6FF,#4A7BFF);font-weight:700}
+  .vs{margin-top:20px;border:1px solid rgba(90,190,255,.3);border-radius:18px;overflow:hidden;background:linear-gradient(160deg,rgba(35,214,255,.07),rgba(74,123,255,.02))}
+  .vsrow{display:grid;grid-template-columns:1.7fr .8fr .9fr;align-items:center;padding:12px 16px;border-top:1px solid rgba(255,255,255,.06);font-size:14px}
+  .vsrow.head{border-top:0;background:rgba(255,255,255,.04);font-weight:700;font-size:13px;color:var(--ink2)}
+  .vsrow .f{color:var(--ink2)}
+  .vsrow .yes{color:#6ee7a8;font-weight:700;text-align:center}
+  .vsrow .no{color:#5b6b82;text-align:center}
+  .vsrow .vip{text-align:center;color:#23D6FF;font-weight:700;background:rgba(35,214,255,.07)}
+  .pts{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+  .ptsnum{font-size:34px;font-weight:800;color:#23D6FF;letter-spacing:.5px}
   .payprev{margin:0 0 12px}
   .payprev img{max-width:220px;border-radius:12px;border:1px solid rgba(120,160,220,.25)}
 </style>
@@ -472,8 +485,38 @@
     return h
   }
 
+  function vsBlock() {
+    var rows = [
+      ['点菜 / 做菜 / 菜谱 / 统计', 1, 1],
+      ['数据存在自己设备上', 1, 1],
+      ['云端同步、换手机不丢', 0, 1],
+      ['家庭模式，最多 5 人一起用', 0, 1],
+      ['口味记忆推荐', 0, 1],
+      ['每月账单 / 月报', 0, 1],
+      ['全站付费工具直接下', 0, 1],
+      ['新工具优先试用', 0, 1],
+    ]
+    return '<div class="vs"><div class="vsrow head"><div>能干什么</div><div class="yes">免费</div><div class="vip">会员</div></div>' +
+      rows.map(function (r) {
+        return '<div class="vsrow"><div class="f">' + r[0] + '</div>' +
+          '<div class="' + (r[1] ? 'yes' : 'no') + '">' + (r[1] ? '✓' : '—') + '</div>' +
+          '<div class="vip">' + (r[2] ? '✓' : '—') + '</div></div>'
+      }).join('') + '</div>'
+  }
+
+  function catOf(p) { return p.cat || p.tag || '其他' }
+  function catsOf(list) {
+    var m = {}, order = []
+    list.forEach(function (p) { var c = catOf(p); if (!m[c]) { m[c] = 0; order.push(c) } m[c] += 1 })
+    return order.map(function (c) { return { cat: c, n: m[c] } })
+  }
+  var CAT = ''
+
   function pageProducts() {
-    var list = SITE.products || []
+    var allList = SITE.products || []
+    var cs = catsOf(allList)
+    if (CAT && !cs.some(function (x) { return x.cat === CAT })) CAT = ''
+    var list = CAT ? allList.filter(function (p) { return catOf(p) === CAT }) : allList
     var bar = (SITE.notices || []).length
       ? '<div class="notice"><b>公告</b><span>' + SITE.notices.map(function (n) { return esc(n.text) }).join('　·　') + '</span></div>'
       : ''
@@ -484,13 +527,14 @@
         (p.imgUrl ? '<img class="pimg" src="' + esc(p.imgUrl) + '" alt="' + esc(p.name) + '" data-zoom="' + esc(p.imgUrl) + '">' : '') +
         '<h3>' + esc(p.name) + '</h3>' +
         (p.desc ? '<p>' + esc(p.desc) + '</p>' : '') +
-        '<div class="price">' + money(p.price) + '</div>' +
-        '<div class="tags">' + (p.tag ? '<span class="tag">' + esc(p.tag) + '</span>' : '') +
+        '<div class="price">' + money(p.price) + (Number(p.points) > 0 ? ' <span class="pill wait">' + p.points + ' 积分可换</span>' : '') + '</div>' +
+        '<div class="tags">' + (p.cat ? '<span class="tag">' + esc(p.cat) + '</span>' : '') + (p.tag ? '<span class="tag">' + esc(p.tag) + '</span>' : '') +
         (p.ver ? '<span class="tag">版本 ' + esc(p.ver) + '</span>' : '') + '</div>' +
         '<div class="cardact">' +
         (owned ? '<button class="btn pri sm" data-dl="' + p.id + '">下载</button><span class="pill ok">已拥有</span>'
           : mine ? '<span class="pill wait">已下单，等确认</span>'
             : '<button class="btn pri sm" data-buy="' + p.id + '">购买</button>') +
+        (ME && Number(p.points) > 0 && !owned ? '<button class="btn sm" data-redeem="' + p.id + '">用 ' + p.points + ' 积分换</button>' : '') +
         '<button class="btn sm ghost" data-more="' + p.id + '">看详情</button>' +
         (ME && ME.role === 'admin' ? '<button class="btn sm ghost" data-edit="' + p.id + '">编辑</button>' : '') +
         '</div></article>'
@@ -498,7 +542,11 @@
       : '<div class="empty">产品还在整理，稍后就上架。<br>想做什么，也可以直接找我们。</div>'
     return '<section class="fade" style="padding-top:44px">' + bar +
       '<div class="head"><div><div class="kicker">PRODUCTS</div><h2>产品</h2></div>' +
-      '<p>买过的可以反复下，不用再付第二次</p></div>' + body + vipBlock() + '</section>'
+      '<p>共 ' + allList.length + ' 个工具' + (CAT ? ' · 现在看「' + esc(CAT) + '」' + list.length + ' 个' : '') + '，买过的可以反复下' +
+      '<br>每天来领积分，积分能换后面的免费小工具。</p></div>' +
+      '<div class="chips"><button class="chip' + (CAT ? '' : ' on') + '" data-cat="">全部</button>' +
+      cs.map(function (x) { return '<button class="chip' + (CAT === x.cat ? ' on' : '') + '" data-cat="' + esc(x.cat) + '">' + esc(x.cat) + ' ' + x.n + '</button>' }).join('') +
+      '</div>' + body + vipBlock() + vsBlock() + '</section>'
   }
 
   function demoBlock(p) {
@@ -542,11 +590,13 @@
       '<div class="price">' + money(p.price) + '</div>' +
       '<p class="muted">' + esc(p.desc || '') + '</p>' +
       (p.ver ? '<div class="kv"><span>版本</span><b>' + esc(p.ver) + '</b></div>' : '') +
-      (p.tag ? '<div class="kv"><span>分类</span><b>' + esc(p.tag) + '</b></div>' : '') +
+      (p.cat || p.tag ? '<div class="kv"><span>分类</span><b>' + esc(p.cat || p.tag) + '</b></div>' : '') +
+      (Number(p.points) > 0 ? '<div class="kv"><span>积分价</span><b>' + p.points + ' 积分可换</b></div>' : '') +
       '<div class="cardact">' +
       (owned ? '<button class="btn pri" data-dl="' + p.id + '">下载安装包</button>'
         : mine ? '<span class="pill wait">已下单，等确认收款</span>'
           : '<button class="btn pri" data-buy="' + p.id + '">购买</button>') +
+      (ME && Number(p.points) > 0 && !owned ? '<button class="btn" data-redeem="' + p.id + '">用 ' + p.points + ' 积分换</button>' : '') +
       '<a class="btn ghost" href="#/products">回产品列表</a></div></div></section>'
   }
 
@@ -612,6 +662,13 @@
       '<div class="head"><div><div class="kicker">MY ACCOUNT</div><h2>我的</h2></div>' +
       '<p>' + esc(ME.name || '') + (ME.role === 'admin' ? ' · 管理员' : '') +
       (ME.vip ? ' · ' + esc(ME.vipText || '会员') + (ME.vipDays > 0 ? '（剩 ' + ME.vipDays + ' 天）' : '') : '') + '</p></div>' +
+      '<div class="panel" style="margin-bottom:16px"><div class="pts"><div><div class="kicker">POINTS</div>' +
+      '<div class="ptsnum">' + (PSTATE ? PSTATE.points : (ME.points || 0)) + ' 积分</div>' +
+      '<p class="muted" style="margin:6px 0 0">每天来点一下就能领，连着来给得更多（最多 20/天）；积分能换免费小工具。</p></div>' +
+      '<button class="btn pri" id="ptsGet" type="button"' + (PSTATE && PSTATE.claimed ? ' disabled' : '') + '>' +
+      (PSTATE && PSTATE.claimed ? '今天领过了' : '领今天的积分 +' + (PSTATE ? PSTATE.reward : 10)) + '</button></div>' +
+      (PSTATE && PSTATE.streak > 1 ? '<p class="muted">连续签了 ' + PSTATE.streak + ' 天</p>' : '') +
+      '</div>' +
       '<div class="panel" style="margin-bottom:16px"><h3>会员</h3>' +
       (ME.vip
         ? '<div class="kv"><span>状态</span><b>' + esc(ME.vipText || '会员') +
@@ -704,6 +761,9 @@
       '<div class="row"><div class="field"><label>价格（元）</label><input id="pPrice" type="number" min="0" step="1" placeholder="99"></div>' +
       '<div class="field"><label>版本</label><input id="pVer" maxlength="30" placeholder="1.0"></div></div>' +
       '<div class="field"><label>分类标签</label><input id="pTag" maxlength="20" placeholder="家庭工具"></div>' +
+      '<div class="row"><div class="field"><label>分类（产品页按它分组）</label><select id="pCat">' +
+      ['工具', '游戏', '插件', '模板', '其他'].map(function (c) { return '<option value="' + c + '">' + c + '</option>' }).join('') +
+      '</select></div><div class="field"><label>积分价（0 = 不参与积分兑换）</label><input id="pPoints" type="number" min="0" value="0"></div></div>' +
       '<div class="field"><label>简介</label><textarea id="pDesc" maxlength="300" placeholder="它能干啥、给谁用、怎么交付"></textarea></div>' +
       '<div class="field"><label>产品图（会显示在卡片上，点了能放大）</label>' +
       '<input id="pImgFile" type="file" accept="image/*" style="padding:9px 12px">' +
@@ -821,6 +881,15 @@
   }
 
   /* ---------- 渲染 ---------- */
+  var PSTATE = null
+  function refreshPoints(then) {
+    if (!ME) return
+    call('me/points').then(function (r) {
+      if (r.d && r.d.ok) { PSTATE = r.d; ME.points = r.d.points }
+      if (then) then()
+    }).catch(function () { if (then) then() })
+  }
+
   function render() {
     var r = parseHash()
     var cur = r.page
@@ -840,6 +909,7 @@
     if (ft) ft.textContent = TEXTS.foot || '© 2026 风月科技 · fenyuetongqiu.top'
     renderNav(cur)
     var sp = $('statProd'); if (sp) sp.textContent = (SITE.products || []).length
+    if (cur === 'me' && ME && !PSTATE) refreshPoints(function () { render() })
     bind()
     window.scrollTo(0, 0)
   }
@@ -874,6 +944,35 @@
       }
     })
 
+    Array.prototype.forEach.call(document.querySelectorAll('[data-cat]'), function (b) {
+      b.onclick = function () { CAT = b.getAttribute('data-cat') || ''; render() }
+    })
+    Array.prototype.forEach.call(document.querySelectorAll('[data-redeem]'), function (b) {
+      b.onclick = function () {
+        var id = b.getAttribute('data-redeem')
+        if (!confirm('用积分换这个工具？换完就能下载。')) return
+        b.disabled = true
+        call('me/redeem', { id: id }, 'POST').then(function (r) {
+          b.disabled = false
+          if (!r.d || !r.d.ok) return alert((r.d && r.d.error) || '换不了')
+          alert('换好了，用了 ' + r.d.cost + ' 积分，还剩 ' + r.d.points + ' 分。去「我的」里下载。')
+          PSTATE = null
+          loadMine().then(render)
+        }).catch(function () { b.disabled = false; alert('连不上服务器') })
+      }
+    })
+    var pg = $('ptsGet')
+    if (pg) pg.onclick = function () {
+      pg.disabled = true
+      call('me/points/claim', {}, 'POST').then(function (r) {
+        pg.disabled = false
+        if (!r.d || !r.d.ok) return alert((r.d && r.d.error) || '领不了')
+        alert('领到 ' + r.d.reward + ' 积分，现在一共 ' + r.d.points + ' 分')
+        PSTATE = null
+        render()
+      }).catch(function () { pg.disabled = false; alert('连不上服务器') })
+    }
+
     Array.prototype.forEach.call(document.querySelectorAll('[data-buy]'), function (b) {
       b.onclick = function () {
         if (!ME) { try { sessionStorage.setItem('fy-back', location.hash) } catch (e) {} go('login'); return }
@@ -898,7 +997,8 @@
         if (!p) return
         go('admin')
         setTimeout(function () {
-          ;[['pId', p.id], ['pName', p.name], ['pPrice', p.price], ['pVer', p.ver], ['pTag', p.tag],
+          ;[['pId', p.id], ['pCat', p.cat || '工具'], ['pPoints', p.points || 0],
+        ['pName', p.name], ['pPrice', p.price], ['pVer', p.ver], ['pTag', p.tag],
             ['pDesc', p.desc], ['pFile', p.file], ['pFileName', p.fileName], ['pDemoUrl', p.demoUrl], ['pDemo', p.demo]].forEach(function (kv) {
             var e = $(kv[0]); if (e) e.value = kv[1] == null ? '' : kv[1]
           })
@@ -1198,6 +1298,8 @@
         price: ($('pPrice') || {}).value || 0,
         ver: ($('pVer') || {}).value || '',
         tag: ($('pTag') || {}).value || '',
+      cat: ($('pCat') || {}).value || '',
+      points: Number(($('pPoints') || {}).value || 0) || 0,
         desc: ($('pDesc') || {}).value || '',
         file: ($('pFile') || {}).value || '',
         fileName: ($('pFileName') || {}).value || '',
@@ -1219,7 +1321,7 @@
           if (!r.d.ok) return say(r.d.error || '存不上', true)
           say('存好了')
           IMG = { newData: null, oldKey: '' }
-          ;['pId', 'pName', 'pPrice', 'pVer', 'pTag', 'pDesc', 'pFile', 'pFileName', 'pImgFile', 'pDemoUrl', 'pDemo'].forEach(function (k) { var e = $(k); if (e) e.value = '' })
+          ;['pId', 'pName', 'pPrice', 'pVer', 'pTag', 'pDesc', 'pFile', 'pFileName', 'pImgFile', 'pDemoUrl', 'pDemo', 'pPoints'].forEach(function (k) { var e = $(k); if (e) e.value = '' })
           var box = $('pImgBox'); if (box) box.innerHTML = ''
           loadSite().then(render)
         }).catch(function (e) { sv.disabled = false; say(e.message || '连不上服务器', true) })
