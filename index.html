@@ -358,7 +358,7 @@
 
   function renderNav(cur) {
     var waitN = (ME && ME.role === 'admin' && ADM && ADM.wait) ? ' <b class="nbd">' + ADM.wait + '</b>' : ''
-    var items = [['', '首页'], ['products', '产品'], ['download', '下载'], ['about', '关于'], ['contact', '联系']]
+    var items = [['', '首页'], ['products', '产品'], ['vip', '会员'], ['download', '下载'], ['about', '关于'], ['contact', '联系']]
     var h = items.map(function (it) {
       var on = (cur === it[0] || (it[0] === 'products' && cur === 'p')) ? ' class="on"' : ''
       return '<a href="#/' + it[0] + '"' + on + '>' + it[1] + '</a>'
@@ -486,31 +486,42 @@
   }
 
   function vsBlock() {
+    var cfg = vipCfgView()
+    var list = SITE.products || []
+    var byVip = list.filter(function (p) { return p.vipFree !== false })
+    var buyOnly = list.filter(function (p) { return p.vipFree === false })
     var rows = [
-      ['点菜 / 做菜 / 菜谱 / 统计', 1, 1],
-      ['数据存在自己设备上', 1, 1],
-      ['云端同步、换手机不丢', 0, 1],
-      ['家庭模式，最多 5 人一起用', 0, 1],
-      ['口味记忆推荐', 0, 1],
-      ['每月账单 / 月报', 0, 1],
-      ['全站付费工具直接下', 0, 1],
-      ['新工具优先试用', 0, 1],
+      { k: '点菜 / 做菜 / 菜谱 / 统计', f: '✓', v: '✓' },
+      { k: '数据存在自己设备上', f: '✓', v: '✓' },
+      { k: '云端同步，换手机不丢', f: '—', v: '✓' },
+      { k: '家庭模式，最多 5 人一起用', f: '—', v: '✓' },
     ]
-    return '<div class="vs"><div class="vsrow head"><div>能干什么</div><div class="yes">免费</div><div class="vip">会员</div></div>' +
+    ;(cfg.perks || []).forEach(function (t) {
+      if (t) rows.push({ k: String(t), f: '—', v: '✓' })
+    })
+    if (byVip.length) rows.push({ k: '会员直接下这 ' + byVip.length + ' 个工具', f: '要买', v: '✓' })
+    if (buyOnly.length) rows.push({ k: '单独卖的 ' + buyOnly.length + ' 个工具', f: '要买', v: '也要买' })
+    return '<div class="vs"><div class="vsrow head"><div>能干什么（按现在的设置自动算）</div><div class="yes">免费</div><div class="vip">会员</div></div>' +
       rows.map(function (r) {
-        return '<div class="vsrow"><div class="f">' + r[0] + '</div>' +
-          '<div class="' + (r[1] ? 'yes' : 'no') + '">' + (r[1] ? '✓' : '—') + '</div>' +
-          '<div class="vip">' + (r[2] ? '✓' : '—') + '</div></div>'
+        var cls = r.v === '✓' ? 'vip' : 'vip'
+        return '<div class="vsrow"><div class="f">' + esc(r.k) + '</div>' +
+          '<div class="' + (r.f === '✓' ? 'yes' : 'no') + '">' + r.f + '</div>' +
+          '<div class="' + cls + '">' + r.v + '</div></div>'
       }).join('') + '</div>'
   }
 
-  function catOf(p) { return p.cat || p.tag || '其他' }
-  function catsOf(list) {
-    var m = {}, order = []
-    list.forEach(function (p) { var c = catOf(p); if (!m[c]) { m[c] = 0; order.push(c) } m[c] += 1 })
-    return order.map(function (c) { return { cat: c, n: m[c] } })
+  function pageVip() {
+    return '<section class="fade" style="padding-top:44px">' +
+      '<div class="head"><div><div class="kicker">MEMBER</div><h2>会员</h2></div>' +
+      '<p>大部分工具会员直接下；标了「必须单独买」的除外。</p></div>' +
+      vipBlock() + vsBlock() +
+      '<div class="panel" style="margin-top:16px"><h3>怎么算</h3>' +
+      '<div class="kv"><span>生效方式</span><b>确认收款后自动开，到期自动失效</b></div>' +
+      '<div class="kv"><span>续费</span><b>在原来到期日上往后加</b></div>' +
+      '<div class="kv"><span>单独卖的工具</span><b>会员也要单独买，买一次一直能下</b></div>' +
+      '<div class="kv"><span>积分</span><b>会员和免费用户都能签到攒积分换工具</b></div></div>' +
+      '</section>'
   }
-  var CAT = ''
 
   function pageProducts() {
     var allList = SITE.products || []
@@ -530,7 +541,8 @@
         (p.imgUrl ? '<img class="pimg" src="' + esc(p.imgUrl) + '" alt="' + esc(p.name) + '" data-zoom="' + esc(p.imgUrl) + '">' : '') +
         '<h3>' + esc(p.name) + '</h3>' +
         (p.desc ? '<p>' + esc(p.desc) + '</p>' : '') +
-        '<div class="price">' + money(p.price) + (Number(p.points) > 0 ? ' <span class="pill wait">' + p.points + ' 积分可换</span>' : '') + '</div>' +
+        '<div class="price">' + money(p.price) + (Number(p.points) > 0 ? ' <span class="pill wait">' + p.points + ' 积分可换</span>' : '') +
+        (p.vipFree === false ? ' <span class="pill cancel">会员也要单独买</span>' : '') + '</div>' +
         '<div class="tags">' + (p.cat ? '<span class="tag">' + esc(p.cat) + '</span>' : '') + (p.tag ? '<span class="tag">' + esc(p.tag) + '</span>' : '') +
         (p.ver ? '<span class="tag">版本 ' + esc(p.ver) + '</span>' : '') + '</div>' +
         '<div class="cardact">' +
@@ -767,7 +779,9 @@
       '<div class="field"><label>分类标签</label><input id="pTag" maxlength="20" placeholder="家庭工具"></div>' +
       '<div class="row"><div class="field"><label>分类（产品页按它分组）</label><select id="pCat">' +
       ['工具', '游戏', '插件', '模板', '其他'].map(function (c) { return '<option value="' + c + '">' + c + '</option>' }).join('') +
-      '</select></div><div class="field"><label>积分价（0 = 不参与积分兑换）</label><input id="pPoints" type="number" min="0" value="0"></div></div>' +
+      '</select></div><div class="field"><label>积分价（0 = 不参与积分兑换）</label><input id="pPoints" type="number" min="0" value="0"></div>' +
+      '<div class="field"><label>会员能不能直接下</label><select id="pVipFree">' +
+      '<option value="1">能，会员直接下</option><option value="0">不能，必须单独买</option></select></div></div>' +
       '<div class="field"><label>简介</label><textarea id="pDesc" maxlength="300" placeholder="它能干啥、给谁用、怎么交付"></textarea></div>' +
       '<div class="field"><label>产品图（会显示在卡片上，点了能放大）</label>' +
       '<input id="pImgFile" type="file" accept="image/*" style="padding:9px 12px">' +
@@ -900,6 +914,7 @@
     var html
     if (cur === '') html = pageHome()
     else if (cur === 'products') html = pageProducts()
+    else if (cur === 'vip') html = pageVip()
     else if (cur === 'download') html = pageDownload()
     else if (cur === 'p') html = pageProduct(r.arg)
     else if (cur === 'about') html = pageAbout()
@@ -1001,7 +1016,7 @@
         if (!p) return
         go('admin')
         setTimeout(function () {
-          ;[['pId', p.id], ['pCat', p.cat || '工具'], ['pPoints', p.points || 0],
+          ;[['pId', p.id], ['pCat', p.cat || '工具'], ['pPoints', p.points || 0], ['pVipFree', p.vipFree === false ? '0' : '1'],
         ['pName', p.name], ['pPrice', p.price], ['pVer', p.ver], ['pTag', p.tag],
             ['pDesc', p.desc], ['pFile', p.file], ['pFileName', p.fileName], ['pDemoUrl', p.demoUrl], ['pDemo', p.demo]].forEach(function (kv) {
             var e = $(kv[0]); if (e) e.value = kv[1] == null ? '' : kv[1]
@@ -1304,6 +1319,7 @@
         tag: ($('pTag') || {}).value || '',
       cat: ($('pCat') || {}).value || '',
       points: Number(($('pPoints') || {}).value || 0) || 0,
+      vipFree: (($('pVipFree') || {}).value || '1') === '1',
         desc: ($('pDesc') || {}).value || '',
         file: ($('pFile') || {}).value || '',
         fileName: ($('pFileName') || {}).value || '',
