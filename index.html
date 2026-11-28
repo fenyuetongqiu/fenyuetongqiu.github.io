@@ -522,6 +522,14 @@
       '</section>'
   }
 
+  function catOf(p) { return p.cat || p.tag || '其他' }
+  function catsOf(list) {
+    var m = {}, order = []
+    list.forEach(function (p) { var c = catOf(p); if (!m[c]) { m[c] = 0; order.push(c) } m[c] += 1 })
+    return order.map(function (c) { return { cat: c, n: m[c] } })
+  }
+  var CAT = ''
+
   function pageProducts() {
     var allList = SITE.products || []
     var cs = catsOf(allList)
