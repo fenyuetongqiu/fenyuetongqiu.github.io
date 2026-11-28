@@ -211,7 +211,7 @@
 </header>
 
 <main id="app"></main>
-<footer>© 2026 风月科技 · fenyuetongqiu.top</footer>
+<footer id="ft">© 2026 风月科技 · fenyuetongqiu.top</footer>
 
 <script>
 (function () {
@@ -251,6 +251,15 @@
   }
 
   var CONTACT = { phone: '15279729913', wechat: '15279729913', qq: '15279729913', mail: '15279729913@163.com' }
+  var TEXTS = {}
+  function applyText() {
+    var t = (SITE && SITE.text) || {}
+    TEXTS = t
+    if (t.phone) CONTACT.phone = t.phone
+    if (t.wechat) CONTACT.wechat = t.wechat
+    if (t.qq) CONTACT.qq = t.qq
+    if (t.mail) CONTACT.mail = t.mail
+  }
 
   function payModal(order) {
     var d = document.createElement('div')
@@ -352,8 +361,8 @@
   function pageHome() {
     return '<div class="hero fade">' +
       '<span class="eyebrow"><i></i>风月の工作室 · 2026</span>' +
-      '<h1>你说要什么，<br><em>我们就把它做出来</em>。</h1>' +
-      '<p class="sub">风月の工作室。你说要个什么，从想法、写代码、上线到打包成 exe / apk，全在这一间屋子里做完；做完你天天用，不合手就接着改。不接「高大上」，只做能用的东西。</p>' +
+      '<h1>' + (TEXTS.heroTitle ? esc(TEXTS.heroTitle) : '你说要什么，<br><em>我们就把它做出来</em>。') + '</h1>' +
+      '<p class="sub">' + esc(TEXTS.heroSub || '风月の工作室。你说要个什么，从想法、写代码、上线到打包成 exe / apk，全在这一间屋子里做完；做完你天天用，不合手就接着改。不接「高大上」，只做能用的东西。') + '</p>' +
       '<div class="cta"><a class="btn pri" href="#/products">看看产品 →</a>' +
       '<a class="btn" href="#/contact">找我们聊聊</a></div>' +
       '<div class="stats">' +
@@ -728,6 +737,7 @@
           '<div class="field"><label>价格（元）</label><input id="vPrice' + i + '" type="number" min="0" value="' + p2.price + '"></div>' +
           '<div class="field"><label>天数</label><input id="vDays' + i + '" type="number" min="0" value="' + p2.days + '"></div>' +
           '<div class="field"><label>备注</label><input id="vNote' + i + '" maxlength="60" value="' + esc(p2.note) + '"></div>' +
+          '<div class="field"><label>活动价（可空，填了就按这个价卖）</label><input id="vSalePrice' + i + '" type="number" min="0" value="' + (p2.salePrice && p2.salePrice < p2.price ? p2.salePrice : '') + '"></div>' +
           '</div>'
       }).join('') +
       '<div class="muted" style="margin:10px 0 6px">活动折扣（做活动用，不开就按原价卖）</div>' +
@@ -745,6 +755,16 @@
       '<div class="field"><label>别人怎么充（说明文字）</label><textarea id="vHowto" rows="3">' + esc(vcfg.howto) + '</textarea></div>' +
       '<button class="btn" id="vSave" type="button">保存会员设置</button>' +
       '<div class="msg" id="msg4"></div></div>' +
+      '<div class="panel"><h3>站点文案</h3>' +
+      '<p class="muted" style="margin:0 0 12px">首页大标题、副标题、页脚、联系方式，改完点保存全站生效；留空就是默认那句。</p>' +
+      '<div class="field"><label>首页大标题</label><input id="tHero" maxlength="60" value="' + esc(TEXTS.heroTitle || '') + '" placeholder="你说要什么，我们就把它做出来。"></div>' +
+      '<div class="field"><label>首页副标题</label><textarea id="tSub" rows="3" maxlength="400">' + esc(TEXTS.heroSub || '') + '</textarea></div>' +
+      '<div class="field"><label>页脚</label><input id="tFoot" maxlength="120" value="' + esc(TEXTS.foot || '') + '" placeholder="© 2026 风月科技 · fenyuetongqiu.top"></div>' +
+      '<div class="row"><div class="field"><label>电话</label><input id="tPhone" maxlength="30" value="' + esc(CONTACT.phone) + '"></div>' +
+      '<div class="field"><label>微信</label><input id="tWechat" maxlength="30" value="' + esc(CONTACT.wechat) + '"></div></div>' +
+      '<div class="row"><div class="field"><label>QQ</label><input id="tQQ" maxlength="30" value="' + esc(CONTACT.qq) + '"></div>' +
+      '<div class="field"><label>邮箱</label><input id="tMail" maxlength="80" value="' + esc(CONTACT.mail) + '"></div></div>' +
+      '<button class="btn" id="tSave" type="button">保存文案</button><div class="msg" id="msg5"></div></div>' +
       '<div class="panel"><h3>送人 / 开会员</h3>' +
       '<div class="field"><label>给谁（邮箱或名字）</label><input id="gWho" maxlength="60" placeholder="15279729913@163.com 或 风月同秋"></div>' +
       '<div class="field"><label>免费送哪个产品</label><select id="gProd">' + ((SITE.products || []).map(function (p) {
@@ -816,6 +836,8 @@
     else if (cur === 'admin') html = pageAdmin()
     else html = '<section class="fade" style="padding-top:44px"><div class="empty">这页不存在。<a href="#/" style="color:var(--c1)">回首页</a></div></section>'
     $('app').innerHTML = html
+    var ft = $('ft')
+    if (ft) ft.textContent = TEXTS.foot || '© 2026 风月科技 · fenyuetongqiu.top'
     renderNav(cur)
     var sp = $('statProd'); if (sp) sp.textContent = (SITE.products || []).length
     bind()
@@ -1121,7 +1143,8 @@
           name: g('vName' + i, p2.name),
           price: Number(g('vPrice' + i, p2.price)) || 0,
           days: Number(g('vDays' + i, p2.days)) || 0,
-          note: g('vNote' + i, p2.note)
+          note: g('vNote' + i, p2.note),
+          salePrice: Number(g('vSalePrice' + i, 0)) || 0
         }
       })
       var perks = String(g('vPerks', '')).split('\n').map(function (x) { return x.trim() }).filter(Boolean)
@@ -1151,6 +1174,20 @@
         var box = $('msg4')
         if (box) box.textContent = '存好了，产品页已经更新。'
       }).catch(function () { vSave.disabled = false; alert('连不上服务器') })
+    }
+
+    var tSave = $('tSave')
+    if (tSave) tSave.onclick = function () {
+      var g2 = function (id, def) { var e = $(id); return e ? e.value : def }
+      tSave.disabled = true
+      call('admin/text', {
+        heroTitle: g2('tHero', ''), heroSub: g2('tSub', ''), foot: g2('tFoot', ''),
+        phone: g2('tPhone', ''), wechat: g2('tWechat', ''), qq: g2('tQQ', ''), mail: g2('tMail', '')
+      }, 'POST').then(function (r) {
+        tSave.disabled = false
+        if (!r.d || !r.d.ok) return alert((r.d && r.d.error) || '存不上')
+        loadSite().then(function () { render(); var b = $('msg5'); if (b) b.textContent = '存好了，全站已经换了。' })
+      }).catch(function () { tSave.disabled = false; alert('连不上服务器') })
     }
 
     var sv = $('pSave')
@@ -1226,7 +1263,7 @@
   /* ---------- 数据 ---------- */
   function loadSite() {
     return call('site').then(function (r) {
-      if (r.d && r.d.ok) SITE = { products: r.d.products || [], notices: r.d.notices || [], allNotices: r.d.allNotices || r.d.notices || [], payUrl: r.d.payUrl || '', payNote: r.d.payNote || '', vip: r.d.vip || null }
+      if (r.d && r.d.ok) SITE = { products: r.d.products || [], notices: r.d.notices || [], allNotices: r.d.allNotices || r.d.notices || [], payUrl: r.d.payUrl || '', payNote: r.d.payNote || '', vip: r.d.vip || null, text: r.d.text || {} }; applyText()
     }).catch(function () {})
   }
   function loadMine() {
