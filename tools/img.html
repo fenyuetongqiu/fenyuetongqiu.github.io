@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>图片压缩 · 风月小工具</title>
+<style>
+  :root{--bg:#0a1018;--panel:#111a26;--line:#22303f;--ink:#e8f1fa;--ink2:#93a6ba;--c1:#23d6ff;--c2:#4a7bff}
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#12263c,#0a1018 60%);color:var(--ink);font:15px/1.6 "Microsoft YaHei",system-ui,sans-serif}
+  .wrap{max-width:920px;margin:0 auto;padding:34px 18px 70px}
+  h1{font-size:26px;margin:0 0 6px}
+  .sub{color:var(--ink2);margin:0 0 22px;font-size:14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 18px 20px;margin-bottom:16px}
+  .drop{border:1.5px dashed #2c4257;border-radius:14px;padding:30px;text-align:center;color:var(--ink2);cursor:pointer;transition:.15s}
+  .drop:hover{border-color:var(--c1);color:var(--ink)}
+  .row{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:14px}
+  label{font-size:13px;color:var(--ink2)}
+  input[type=range]{accent-color:#23d6ff;width:180px}
+  select,input[type=number]{background:#0d1622;color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font:inherit}
+  .btn{background:linear-gradient(135deg,#23d6ff,#4a7bff);color:#04121c;border:0;border-radius:10px;padding:10px 18px;font:inherit;font-weight:700;cursor:pointer}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+  .item{display:flex;gap:14px;align-items:center;border-top:1px solid var(--line);padding:12px 0}
+  .item img{width:72px;height:72px;object-fit:cover;border-radius:10px;background:#0d1622}
+  .item .info{flex:1;min-width:0}
+  .item .name{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .muted{color:var(--ink2);font-size:13px}
+  .ok{color:#6ee7a8}
+  .warn{color:#ffcf6e}
+  a.dl{color:#04121c;background:#6ee7a8;border-radius:9px;padding:7px 12px;text-decoration:none;font-size:13px;font-weight:700}
+  .foot{margin-top:26px;color:#5b6b82;font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>图片压缩</h1>
+  <p class="sub">本地处理，图不上传；能改尺寸、转格式，顺手把大小压下来。</p>
+  <div class="panel">
+    <div class="drop" id="drop">点这里选图，或者直接把图拖进来（可多选）<br><span class="muted">jpg / png / webp / gif 都行</span></div>
+    <input id="file" type="file" accept="image/*" multiple hidden>
+    <div class="row">
+      <label>质量 <b id="qVal">80</b>%</label><input id="q" type="range" min="30" max="100" value="80">
+      <label>最长边 <select id="maxw">
+        <option value="0">不缩</option><option value="1920">1920</option><option value="1280" selected>1280</option><option value="800">800</option><option value="400">400</option>
+      </select></label>
+      <label>格式 <select id="fmt"><option value="image/jpeg">JPG</option><option value="image/webp">WEBP</option><option value="image/png">PNG</option></select></label>
+      <button class="btn" id="go" type="button">压缩</button>
+      <button class="btn ghost" id="clear" type="button">清空</button>
+    </div>
+  </div>
+  <div class="panel" id="list"><p class="muted">还没有图。</p></div>
+  <p class="foot">风月の工作室 · 本地跑，不联网也不上传</p>
+</div>
+<script>
+var files = [], outs = []
+var $ = function (id) { return document.getElementById(id) }
+function fmtSize(n) { return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : (n / 1024).toFixed(0) + ' KB' }
+function add(list) { files = files.concat(Array.prototype.slice.call(list)); render() }
+$('drop').onclick = function () { $('file').click() }
+$('drop').ondragover = function (e) { e.preventDefault(); $('drop').style.borderColor = '#23d6ff' }
+$('drop').ondragleave = function () { $('drop').style.borderColor = '' }
+$('drop').ondrop = function (e) { e.preventDefault(); $('drop').style.borderColor = ''; add(e.dataTransfer.files) }
+$('file').onchange = function () { add($('file').files); $('file').value = '' }
+$('q').oninput = function () { $('qVal').textContent = $('q').value }
+$('clear').onclick = function () { files = []; outs = []; render() }
+function render() {
+  var box = $('list')
+  if (!files.length) { box.innerHTML = '<p class="muted">还没有图。</p>'; return }
+  box.innerHTML = files.map(function (f, i) {
+    var o = outs[i]
+    return '<div class="item">' +
+      (o ? '<img src="' + o.url + '">' : '<img src="">') +
+      '<div class="info"><div class="name">' + f.name + '</div>' +
+      '<div class="muted">原 ' + fmtSize(f.size) + (o ? ' → <span class="ok">' + fmtSize(o.size) + '</span>（省 ' + Math.max(0, Math.round((1 - o.size / f.size) * 100)) + '%） ' + o.w + '×' + o.h : '') + '</div></div>' +
+      (o ? '<a class="dl" href="' + o.url + '" download="' + o.name + '">下载</a>' : '') +
+      '</div>'
+  }).join('')
+}
+$('go').onclick = function () {
+  if (!files.length) return alert('先选图')
+  var q = $('q').value / 100, maxw = Number($('maxw').value), fmt = $('fmt').value
+  outs = []
+  var done = 0
+  files.forEach(function (f, i) {
+    var img = new Image()
+    img.onload = function () {
+      var w = img.width, h = img.height
+      if (maxw && Math.max(w, h) > maxw) { var k = maxw / Math.max(w, h); w = Math.round(w * k); h = Math.round(h * k) }
+      var cv = document.createElement('canvas'); cv.width = w; cv.height = h
+      var ctx = cv.getContext('2d')
+      if (fmt === 'image/jpeg') { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h) }
+      ctx.drawImage(img, 0, 0, w, h)
+      cv.toBlob(function (blob) {
+        outs[i] = { url: URL.createObjectURL(blob), size: blob.size, w: w, h: h, name: f.name.replace(/\.[^.]+$/, '') + (fmt === 'image/png' ? '.png' : fmt === 'image/webp' ? '.webp' : '.jpg') }
+        if (++done === files.length) render()
+      }, fmt, q)
+    }
+    img.onerror = function () { outs[i] = { url: '', size: 0, w: 0, h: 0, name: f.name }; if (++done === files.length) render() }
+    img.src = URL.createObjectURL(f)
+  })
+  render()
+}
+</script>
+</body>
+</html>
