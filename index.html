@@ -380,6 +380,33 @@
       '</div></section>'
   }
 
+  var VIP_PLANS = [
+    { id: 'vip-month', name: '月会员', price: 6, unit: '/ 月', note: '30 天，先试一个月' },
+    { id: 'vip-year', name: '年会员', price: 48, unit: '/ 年', note: '365 天，等于打了 8 折' },
+    { id: 'vip-life', name: '终生会员', price: 168, unit: '一次性', note: '买到就不过期，以后新功能也能用' }
+  ]
+
+  function vipBlock() {
+    var me = ME || {}
+    var on = !!me.vip
+    var st = on
+      ? ('你现在是 ' + esc(me.vipText || '会员') + (me.vipDays > 0 ? '，还剩 ' + me.vipDays + ' 天（到 ' + when(me.vipUntil) + '）' : '，不过期'))
+      : (ME ? '还不是会员' : '登录后能买，也能看自己的会员状态')
+    var h = '<div class="panel" style="margin-top:18px">' +
+      '<div class="head" style="margin:0 0 10px"><div><div class="kicker">MEMBER</div><h2 style="font-size:22px">会员</h2></div><p>' + st + '</p></div>' +
+      '<div class="cards">' + VIP_PLANS.map(function (v) {
+        var mine = MYORDERS.some(function (o) { return o.productId === v.id && o.status === 'wait' })
+        return '<article class="card"><h3>' + v.name + '</h3>' +
+          '<div class="price">' + money(v.price) + '<span class="muted" style="font-size:13px;font-weight:400"> ' + v.unit + '</span></div>' +
+          '<p>' + v.note + '</p>' +
+          '<div class="cardact">' +
+          (mine ? '<span class="pill wait">已下单，等确认</span>' : '<button class="btn pri sm" data-buy="' + v.id + '">' + (on ? '续费' : '开通') + '</button>') +
+          '</div></article>'
+      }).join('') + '</div>' +
+      '<p class="muted" style="margin-top:12px">会员 = 全部产品不花钱直接下 + 小厨房家庭模式。到期自动失效，续费是在原来的到期日往后加。</p></div>'
+    return h
+  }
+
   function pageProducts() {
     var list = SITE.products || []
     var bar = (SITE.notices || []).length
@@ -406,7 +433,7 @@
       : '<div class="empty">产品还在整理，稍后就上架。<br>想做什么，也可以直接找我们。</div>'
     return '<section class="fade" style="padding-top:44px">' + bar +
       '<div class="head"><div><div class="kicker">PRODUCTS</div><h2>产品</h2></div>' +
-      '<p>买过的可以反复下，不用再付第二次</p></div>' + body + '</section>'
+      '<p>买过的可以反复下，不用再付第二次</p></div>' + body + vipBlock() + '</section>'
   }
 
   function demoBlock(p) {
@@ -514,11 +541,18 @@
 
   function pageMe() {
     if (!ME) return pageLogin()
-    var owns = MYORDERS.filter(function (o) { return o.status === 'paid' })
+    var owns = MYORDERS.filter(function (o) { return o.status === 'paid' && String(o.productId || '').indexOf('vip-') !== 0 })
     var waits = MYORDERS.filter(function (o) { return o.status === 'wait' })
     return '<section class="fade" style="padding-top:44px">' +
       '<div class="head"><div><div class="kicker">MY ACCOUNT</div><h2>我的</h2></div>' +
-      '<p>' + esc(ME.name || '') + (ME.role === 'admin' ? ' · 管理员' : '') + (ME.vip ? ' · 终生 VIP' : '') + '</p></div>' +
+      '<p>' + esc(ME.name || '') + (ME.role === 'admin' ? ' · 管理员' : '') +
+      (ME.vip ? ' · ' + esc(ME.vipText || '会员') + (ME.vipDays > 0 ? '（剩 ' + ME.vipDays + ' 天）' : '') : '') + '</p></div>' +
+      '<div class="panel" style="margin-bottom:16px"><h3>会员</h3>' +
+      (ME.vip
+        ? '<div class="kv"><span>状态</span><b>' + esc(ME.vipText || '会员') +
+          (ME.vipDays > 0 ? ' · 到 ' + when(ME.vipUntil) + '（剩 ' + ME.vipDays + ' 天）' : ' · 不过期') + '</b></div>'
+        : '<p class="muted">还没开通。开通后全站产品都能下，小厨房家庭模式也能用。</p>') +
+      '<div class="cardact" style="margin-top:10px"><a class="btn sm pri" href="#/products">看会员档位</a></div></div>' +
       '<div class="panel"><h3>我买的产品</h3>' +
       (owns.length ? owns.map(function (o) {
         return '<div class="kv"><span>' + esc(o.productName) + '</span><b><button class="btn sm pri" data-dl="' + o.productId + '">下载</button></b></div>'
