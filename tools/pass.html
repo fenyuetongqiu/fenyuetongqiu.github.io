@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>密码生成器 · 风月小工具</title>
+<style>
+  :root{--bg:#0a1018;--panel:#111a26;--line:#22303f;--ink:#e8f1fa;--ink2:#93a6ba;--c1:#23d6ff}
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#12263c,#0a1018 60%);color:var(--ink);font:15px/1.6 "Microsoft YaHei",system-ui,sans-serif}
+  .wrap{max-width:820px;margin:0 auto;padding:34px 18px 70px}
+  h1{font-size:26px;margin:0 0 6px}
+  .sub{color:var(--ink2);margin:0 0 22px;font-size:14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px}
+  .out{font:700 22px/1.5 Consolas,Menlo,monospace;word-break:break-all;background:#0d1622;border:1px solid var(--line);border-radius:12px;padding:16px;min-height:64px}
+  .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:12px}
+  label{font-size:14px;color:var(--ink2);display:flex;align-items:center;gap:6px}
+  input[type=range]{accent-color:#23d6ff;width:200px}
+  input[type=checkbox]{accent-color:#23d6ff;width:16px;height:16px}
+  .btn{background:linear-gradient(135deg,#23d6ff,#4a7bff);color:#04121c;border:0;border-radius:10px;padding:10px 18px;font:inherit;font-weight:700;cursor:pointer}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+  .bar{height:8px;border-radius:99px;background:#16232f;overflow:hidden;margin-top:14px}
+  .bar i{display:block;height:100%;width:0;transition:.25s;background:linear-gradient(90deg,#ff6b6b,#ffcf6e,#6ee7a8)}
+  .muted{color:var(--ink2);font-size:13px}
+  .list{margin-top:12px}
+  .list div{font:inherit;font-family:Consolas,monospace;padding:8px 10px;border-radius:8px;background:#0d1622;margin-bottom:6px;display:flex;justify-content:space-between;gap:10px;cursor:pointer}
+  .list div:hover{outline:1px solid #23d6ff}
+  .foot{margin-top:26px;color:#5b6b82;font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>密码生成器</h1>
+  <p class="sub">在你自己浏览器里随机生成，不联网；点一下就能复制。</p>
+  <div class="panel">
+    <div class="out" id="pwd">点「换一个」</div>
+    <div class="row">
+      <label>长度 <b id="lenVal">20</b></label>
+      <input id="len" type="range" min="6" max="64" value="20">
+      <label><input id="up" type="checkbox" checked>大写</label>
+      <label><input id="low" type="checkbox" checked>小写</label>
+      <label><input id="num" type="checkbox" checked>数字</label>
+      <label><input id="sym" type="checkbox" checked>符号</label>
+      <label><input id="pro" type="checkbox" checked>去掉易混（0O1lI）</label>
+    </div>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="row">
+      <button class="btn" id="gen" type="button">换一个</button>
+      <button class="btn ghost" id="copy" type="button">复制</button>
+      <button class="btn ghost" id="ten" type="button">来 10 个</button>
+      <span class="muted" id="tip"></span>
+    </div>
+    <div class="list" id="list"></div>
+  </div>
+  <p class="foot">风月の工作室 · 纯本地，不发网络请求</p>
+</div>
+<script>
+var $ = function (id) { return document.getElementById(id) }
+function pool() {
+  var s = ''
+  if ($('up').checked) s += 'ABCDEFGHJKLMNPQRSTUVWXYZ'
+  if ($('low').checked) s += 'abcdefghijkmnopqrstuvwxyz'
+  if ($('num').checked) s += '23456789'
+  if ($('sym').checked) s += '!@#$%^&*()-_=+[]{};:,.?/~'
+  if (!$('pro').checked) s += '0O1lI'
+  return s || 'abcdefghijkmnopqrstuvwxyz23456789'
+}
+function rnd(n) {
+  var a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n
+}
+function make() {
+  var p = pool(), n = Number($('len').value), o = ''
+  for (var i = 0; i < n; i++) o += p[rnd(p.length)]
+  // 至少各来一个
+  var need = []
+  if ($('up').checked) need.push('ABCDEFGHJKLMNPQRSTUVWXYZ')
+  if ($('low').checked) need.push('abcdefghijkmnopqrstuvwxyz')
+  if ($('num').checked) need.push('23456789')
+  if ($('sym').checked) need.push('!@#$%^&*()-_=+')
+  for (var j = 0; j < need.length && j < n; j++) {
+    var ch = need[j][rnd(need[j].length)]
+    var k = rnd(o.length)
+    o = o.slice(0, k) + ch + o.slice(k + 1)
+  }
+  return o
+}
+function score(p) {
+  var s = 0
+  if (/[A-Z]/.test(p)) s++
+  if (/[a-z]/.test(p)) s++
+  if (/[0-9]/.test(p)) s++
+  if (/[^A-Za-z0-9]/.test(p)) s++
+  s += Math.min(4, Math.floor(p.length / 8))
+  return Math.min(10, s * 1.25)
+}
+function show(p) {
+  $('pwd').textContent = p
+  $('bar').style.width = (score(p) * 10) + '%'
+  $('tip').textContent = '长度 ' + p.length + ' · 强度 ' + Math.round(score(p)) + '/10'
+}
+$('len').oninput = function () { $('lenVal').textContent = $('len').value }
+$('gen').onclick = function () { show(make()); $('list').innerHTML = '' }
+$('copy').onclick = function () {
+  var t = $('pwd').textContent
+  navigator.clipboard.writeText(t).then(function () { $('tip').textContent = '复制好了' })
+}
+$('ten').onclick = function () {
+  var arr = []
+  for (var i = 0; i < 10; i++) arr.push(make())
+  $('list').innerHTML = arr.map(function (p) { return '<div data-p="' + p + '"><span>' + p + '</span><span class="muted">点我复制</span></div>' }).join('')
+  Array.prototype.forEach.call(document.querySelectorAll('#list div'), function (d) {
+    d.onclick = function () { navigator.clipboard.writeText(d.getAttribute('data-p')); d.lastChild.textContent = '复制好了' }
+  })
+}
+show(make())
+</script>
+</body>
+</html>
