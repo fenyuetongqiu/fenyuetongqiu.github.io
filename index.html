@@ -1114,6 +1114,7 @@
     var vSave = $('vSave')
     if (vSave) vSave.onclick = function () {
       var g = function (id, def) { var e = $(id); return e ? e.value : def }
+      var vcfg = vipCfgView()
       var plans = vcfg.plans.map(function (p2, i) {
         return {
           key: p2.key,
