@@ -255,6 +255,9 @@
     d.innerHTML = '<div class="paycard">' +
       '<h3>付款 ' + money(order.price) + '</h3>' +
       '<p class="muted">订单号 ' + esc(order.id) + ' · ' + esc(order.productName) + '</p>' +
+      (order.origPrice && order.origPrice > order.price
+        ? '<p class="muted">原价 ' + money(order.origPrice) + ' · ' + esc(order.saleLabel || '活动价') + '，省 ' + money(order.origPrice - order.price) + '</p>'
+        : '') +
       img +
       '<p class="muted">' + (SITE.payNote ? esc(SITE.payNote) : '扫码付完，把付款截图发我微信，确认后就能下载。') + '</p>' +
       '<p class="muted">付完点下面这个按钮，我就知道是谁付的：</p>' +
@@ -407,6 +410,10 @@
       headline: v.headline || VIP_FALLBACK.headline,
       perks: (v.perks && v.perks.length) ? v.perks : VIP_FALLBACK.perks,
       howto: v.howto || VIP_FALLBACK.howto,
+      saleOn: !!v.saleOn,
+      saleLabel: v.saleLabel || '',
+      saleDaysLeft: v.saleDaysLeft || 0,
+      sale: v.sale || { on: false, label: '', percent: 0, until: '', keys: ['month', 'year', 'life'] },
       plans: v.plans
     }
   }
@@ -418,18 +425,25 @@
     var mineLine = on
       ? '<span class="pill ok">你现在是 ' + esc(me.vipText || '会员') + (me.vipDays > 0 ? ' · 还剩 ' + me.vipDays + ' 天' : ' · 不过期') + '</span>'
       : (ME ? '<span class="pill wait">还不是会员</span>' : '<span class="muted">登录后能开通，也能看自己的会员状态</span>')
+    var saleTag = cfg.saleOn
+      ? '<div class="kv"><span>正在搞活动</span><b><span class="pill ok">' + esc(cfg.saleLabel || '限时折扣') + '</span>' +
+        (cfg.saleDaysLeft > 0 ? ' 还剩 ' + cfg.saleDaysLeft + ' 天' : ' 长期有效') + '</b></div>'
+      : ''
     var h = '<div class="panel" id="member" style="margin-top:18px">' +
       '<div class="head" style="margin:0 0 12px"><div><div class="kicker">MEMBER</div><h2 style="font-size:22px">会员</h2></div><p>' + esc(cfg.headline) + '</p></div>' +
       '<div class="two"><div><h3>会员能干什么</h3><ul class="perks">' +
       cfg.perks.map(function (x) { return '<li>' + esc(x) + '</li>' }).join('') + '</ul></div>' +
       '<div><h3>别人怎么充</h3><p class="muted">' + esc(cfg.howto) + '</p>' +
       '<div class="kv"><span>付款方式</span><b>微信扫码（照片发我也行）</b></div>' +
-      '<div class="kv"><span>多久到</span><b>我看到就开，一般当天</b></div>' +
+      '<div class="kv"><span>多久到</span><b>我看到就开，一般当天</b></div>' + saleTag +
       '<p style="margin-top:10px">' + mineLine + '</p></div></div>' +
       '<div class="cards" style="margin-top:14px">' + cfg.plans.map(function (v) {
         var waiting = MYORDERS.some(function (o) { return o.productId === 'vip-' + v.key && o.status === 'wait' })
         return '<article class="card" id="vip-' + esc(v.key) + '"><h3>' + esc(v.name) + '</h3>' +
-          '<div class="price">' + money(v.price) + '<span class="muted" style="font-size:13px;font-weight:400"> ' + (v.days > 0 ? '/ ' + v.days + ' 天' : '一次性') + '</span></div>' +
+          '<div class="price">' +
+          (v.salePrice ? '<s class="muted" style="font-size:15px;font-weight:400;margin-right:6px">' + money(v.price) + '</s>' + money(v.salePrice) : money(v.price)) +
+          '<span class="muted" style="font-size:13px;font-weight:400"> ' + (v.days > 0 ? '/ ' + v.days + ' 天' : '一次性') + '</span>' +
+          (v.salePrice ? ' <span class="pill ok">' + esc(cfg.saleLabel || '活动价') + '</span>' : '') + '</div>' +
           (v.note ? '<p>' + esc(v.note) + '</p>' : '') +
           '<div class="cardact">' +
           (waiting ? '<span class="pill wait">已下单，等我确认</span>' : '<button class="btn pri sm" data-buy="vip-' + esc(v.key) + '">' + (on ? '续费' : '开通') + '</button>') +
@@ -705,6 +719,18 @@
           '<div class="field"><label>备注</label><input id="vNote' + i + '" maxlength="60" value="' + esc(p2.note) + '"></div>' +
           '</div>'
       }).join('') +
+      '<div class="muted" style="margin:10px 0 6px">活动折扣（做活动用，不开就按原价卖）</div>' +
+      '<div class="row" style="margin-bottom:8px">' +
+      '<div class="field"><label>开活动</label><select id="vSaleOn"><option value=""' + (vcfg.saleOn ? '' : ' selected') + '>不开</option><option value="1"' + (vcfg.saleOn ? ' selected' : '') + '>开</option></select></div>' +
+      '<div class="field"><label>活动名</label><input id="vSaleLabel" maxlength="20" value="' + esc(vcfg.sale.label || '') + '" placeholder="比如 双十二 8 折"></div>' +
+      '<div class="field"><label>折扣（% OFF）</label><input id="vSalePct" type="number" min="0" max="90" value="' + (vcfg.sale.percent || 0) + '"></div>' +
+      '<div class="field"><label>截止日期（空=一直）</label><input id="vSaleUntil" type="date" value="' + esc(vcfg.sale.until || '') + '"></div>' +
+      '</div>' +
+      '<div class="field"><label>哪些档位参加（一个都不勾 = 全参加）</label>' +
+      ['month', 'year', 'life'].map(function (k, i) {
+        var nm = i === 0 ? '月会员' : i === 1 ? '年会员' : '终生会员'
+        return '<label style="display:inline-block;margin-right:16px"><input type="checkbox" id="vSaleKey' + i + '" data-key="' + k + '"' + ((vcfg.sale.keys || []).indexOf(k) >= 0 ? ' checked' : '') + '> ' + nm + '</label>'
+      }).join('') + '</div>' +
       '<div class="field"><label>别人怎么充（说明文字）</label><textarea id="vHowto" rows="3">' + esc(vcfg.howto) + '</textarea></div>' +
       '<button class="btn" id="vSave" type="button">保存会员设置</button>' +
       '<div class="msg" id="msg4"></div></div>' +
@@ -1083,12 +1109,24 @@
         }
       })
       var perks = String(g('vPerks', '')).split('\n').map(function (x) { return x.trim() }).filter(Boolean)
+      var saleKeys = []
+      ;[0, 1, 2].forEach(function (i) {
+        var cb = $('vSaleKey' + i)
+        if (cb && cb.checked) saleKeys.push(cb.getAttribute('data-key'))
+      })
       vSave.disabled = true
       call('admin/vipcfg', {
         headline: g('vHead', vcfg.headline),
         perks: perks,
         howto: g('vHowto', vcfg.howto),
-        plans: plans
+        plans: plans,
+        sale: {
+          on: String(g('vSaleOn', '')) === '1',
+          label: g('vSaleLabel', ''),
+          percent: Number(g('vSalePct', 0)) || 0,
+          until: g('vSaleUntil', ''),
+          keys: saleKeys
+        }
       }, 'POST').then(function (r) {
         vSave.disabled = false
         if (!r.d || !r.d.ok) return alert((r.d && r.d.error) || '存不上')
