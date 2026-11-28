@@ -515,8 +515,11 @@
   function pageProducts() {
     var allList = SITE.products || []
     var cs = catsOf(allList)
-    if (CAT && !cs.some(function (x) { return x.cat === CAT })) CAT = ''
-    var list = CAT ? allList.filter(function (p) { return catOf(p) === CAT }) : allList
+    var freeN = allList.filter(function (p) { return Number(p.points) > 0 }).length
+    if (CAT && CAT !== '__free' && !cs.some(function (x) { return x.cat === CAT })) CAT = ''
+    var list = CAT === '__free'
+      ? allList.filter(function (p) { return Number(p.points) > 0 })
+      : (CAT ? allList.filter(function (p) { return catOf(p) === CAT }) : allList)
     var bar = (SITE.notices || []).length
       ? '<div class="notice"><b>公告</b><span>' + SITE.notices.map(function (n) { return esc(n.text) }).join('　·　') + '</span></div>'
       : ''
@@ -542,10 +545,11 @@
       : '<div class="empty">产品还在整理，稍后就上架。<br>想做什么，也可以直接找我们。</div>'
     return '<section class="fade" style="padding-top:44px">' + bar +
       '<div class="head"><div><div class="kicker">PRODUCTS</div><h2>产品</h2></div>' +
-      '<p>共 ' + allList.length + ' 个工具' + (CAT ? ' · 现在看「' + esc(CAT) + '」' + list.length + ' 个' : '') + '，买过的可以反复下' +
+      '<p>共 ' + allList.length + ' 个工具' + (CAT === '__free' ? ' · 积分可换 ' + list.length + ' 个' : CAT ? ' · 现在看「' + esc(CAT) + '」' + list.length + ' 个' : '') + '，买过的可以反复下' +
       '<br>每天来领积分，积分能换后面的免费小工具。</p></div>' +
       '<div class="chips"><button class="chip' + (CAT ? '' : ' on') + '" data-cat="">全部</button>' +
       cs.map(function (x) { return '<button class="chip' + (CAT === x.cat ? ' on' : '') + '" data-cat="' + esc(x.cat) + '">' + esc(x.cat) + ' ' + x.n + '</button>' }).join('') +
+      (freeN ? '<button class="chip' + (CAT === '__free' ? ' on' : '') + '" data-cat="__free">积分可换 ' + freeN + '</button>' : '') +
       '</div>' + body + vipBlock() + vsBlock() + '</section>'
   }
 
