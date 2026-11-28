@@ -546,8 +546,10 @@
         (p.ver ? '<span class="tag">版本 ' + esc(p.ver) + '</span>' : '') + '</div>' +
         '<div class="cardact">' +
         (owned ? '<button class="btn pri sm" data-dl="' + p.id + '">下载</button><span class="pill ok">已拥有</span>'
-          : mine ? '<span class="pill wait">已下单，等确认</span>'
-            : '<button class="btn pri sm" data-buy="' + p.id + '">购买</button>') +
+          : (Number(p.price) === 0 && Number(p.points) === 0 && p.file) ? '<button class="btn pri sm" data-dl="' + p.id + '">免费下载</button><span class="pill ok">免费</span>'
+            : (Number(p.price) === 0 && Number(p.points) === 0 && !p.file && (p.demoUrl || p.demoLink)) ? '<a class="btn pri sm" href="' + esc(p.demoUrl || p.demoLink) + '" target="_blank" rel="noopener">在线用</a>'
+              : mine ? '<span class="pill wait">已下单，等确认</span>'
+                : '<button class="btn pri sm" data-buy="' + p.id + '">购买</button>') +
         (ME && Number(p.points) > 0 && !owned ? '<button class="btn sm" data-redeem="' + p.id + '">用 ' + p.points + ' 积分换</button>' : '') +
         '<button class="btn sm ghost" data-more="' + p.id + '">看详情</button>' +
         (ME && ME.role === 'admin' ? '<button class="btn sm ghost" data-edit="' + p.id + '">编辑</button>' : '') +
@@ -609,8 +611,10 @@
       (Number(p.points) > 0 ? '<div class="kv"><span>积分价</span><b>' + p.points + ' 积分可换</b></div>' : '') +
       '<div class="cardact">' +
       (owned ? '<button class="btn pri" data-dl="' + p.id + '">下载安装包</button>'
-        : mine ? '<span class="pill wait">已下单，等确认收款</span>'
-          : '<button class="btn pri" data-buy="' + p.id + '">购买</button>') +
+        : (Number(p.price) === 0 && Number(p.points) === 0 && p.file) ? '<button class="btn pri" data-dl="' + p.id + '">免费下载</button>'
+          : (Number(p.price) === 0 && Number(p.points) === 0 && !p.file && (p.demoUrl || p.demoLink)) ? '<a class="btn pri" href="' + esc(p.demoUrl || p.demoLink) + '" target="_blank" rel="noopener">在线用</a>'
+            : mine ? '<span class="pill wait">已下单，等确认收款</span>'
+              : '<button class="btn pri" data-buy="' + p.id + '">购买</button>') +
       (ME && Number(p.points) > 0 && !owned ? '<button class="btn" data-redeem="' + p.id + '">用 ' + p.points + ' 积分换</button>' : '') +
       '<a class="btn ghost" href="#/products">回产品列表</a></div></div></section>'
   }
